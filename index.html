@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Orders — Yuno Packaging</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1B2E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Orders">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F4F6F9;
+    --surface:#FFFFFF;
+    --surface-alt:#FAFBFC;
+    --ink:#101828;
+    --ink-soft:#667085;
+    --primary:#1E3A6E;
+    --primary-soft:#2F5590;
+    --navy-dark:#0B1C33;
+    --cyan:#0E7C86;
+    --amber:#B4790F;
+    --red:#C0392B;
+    --green:#1F7A4D;
+    --line:#E3E7EC;
+    --line-soft:#EEF1F4;
+    --radius:12px;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.07);
+    --shadow-md:0 6px 16px rgba(16,24,40,.07), 0 2px 4px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px 28px 80px;}
+
+  /* ---- Top nav ---- */
+  .topnav{background:var(--navy-dark);color:#fff;}
+  .topnav-inner{max-width:1320px;margin:0 auto;padding:13px 28px;display:flex;justify-content:space-between;align-items:center;}
+  .brand{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13.5px;letter-spacing:.09em;display:flex;align-items:center;gap:10px;}
+  .brand-mark{width:8px;height:8px;border-radius:2px;background:var(--cyan);display:inline-block;flex-shrink:0;}
+  .brand-sub{font-family:'IBM Plex Sans',sans-serif;font-weight:400;letter-spacing:0;color:#93A3BD;font-size:12px;margin-left:4px;}
+  .topnav-right{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#B8C4D6;display:flex;align-items:center;gap:7px;}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:#39D98A;display:inline-block;box-shadow:0 0 0 3px rgba(57,217,138,.22);}
+
+  /* ---- Header ---- */
+  header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px;margin:26px 0 28px;padding-bottom:20px;border-bottom:1px solid var(--line);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .eyebrow .mark{display:inline-block;width:10px;height:10px;position:relative;}
+  .eyebrow .mark::before,.eyebrow .mark::after{content:"";position:absolute;background:var(--cyan);}
+  .eyebrow .mark::before{left:4px;top:0;width:2px;height:10px;}
+  .eyebrow .mark::after{top:4px;left:0;height:2px;width:10px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:29px;margin:0;letter-spacing:-.01em;color:var(--ink);}
+  .updated{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:7px;}
+  .controls{display:flex;gap:9px;flex-wrap:wrap;align-items:center;}
+  .controls input, .controls select{
+    font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:9px 12px;border-radius:8px;
+    border:1px solid var(--line);background:var(--surface);color:var(--ink);min-width:160px;box-shadow:var(--shadow-sm);
+  }
+  .controls input:focus, .controls select:focus{outline:none;border-color:var(--primary);}
+  .btn{
+    font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 15px;border-radius:8px;
+    border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap;box-shadow:var(--shadow-sm);
+    transition:border-color .12s,color .12s,box-shadow .12s;
+  }
+  .btn:hover{border-color:var(--primary);color:var(--primary);box-shadow:var(--shadow-md);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-soft);border-color:var(--primary-soft);color:#fff;}
+  .data-source{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);margin-top:5px;}
+  .reset-link{
+    background:none;border:none;padding:0;margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    color:var(--primary);text-decoration:underline;cursor:pointer;
+  }
+  .reset-link:hover{color:var(--primary-soft);}
+  .import-notice{
+    font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:11px 16px;border-radius:9px;margin-bottom:18px;
+    background:#E1EFF0;color:var(--cyan);border:1px solid #bcdadb;display:none;box-shadow:var(--shadow-sm);
+  }
+  .import-notice-warn{background:#FBEBD6;color:#8a5a15;border-color:#f0d2a0;}
+  @media print{
+    .topnav, .controls, .import-notice, .table-head-row input, footer .no-print{display:none !important;}
+  }
+
+  /* ---- KPI row ---- */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:19px 20px 18px;box-shadow:var(--shadow-sm);transition:box-shadow .15s;}
+  .kpi:hover{box-shadow:var(--shadow-md);}
+  .kpi-top{display:flex;align-items:center;gap:10px;margin-bottom:15px;}
+  .kpi-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .kpi-icon svg{width:16px;height:16px;}
+  .kpi .label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);}
+  .kpi .value{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:28px;line-height:1;}
+  .kpi .sub{font-size:12px;color:var(--ink-soft);margin-top:7px;}
+
+  /* ---- Panels ---- */
+  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px;}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:21px 23px;box-shadow:var(--shadow-sm);}
+  .panel h2{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin:0 0 3px;color:var(--ink);}
+  .panel .panel-sub{font-size:12px;color:var(--ink-soft);margin-bottom:16px;}
+
+  .bar-row{display:grid;grid-template-columns:150px 1fr 42px 90px;align-items:center;gap:10px;margin-bottom:10px;font-size:12.5px;}
+  .bar-row .name{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{background:var(--line-soft);border-radius:5px;height:10px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:5px;background:var(--primary);}
+  .bar-row .count{font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--ink-soft);}
+  .bar-row .rowval{font-family:'IBM Plex Mono',monospace;text-align:right;color:var(--ink-soft);font-size:11px;}
+
+  .cust-table-wrap{overflow-x:auto;}
+  table.cust-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.cust-table thead th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);border-bottom:1.5px solid var(--ink);padding:6px 10px;}
+  table.cust-table tbody td{padding:9px 10px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
+  table.cust-table tbody tr:hover{background:#F6F8F9;}
+  .cust-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;display:block;}
+  .lt-cell{display:flex;align-items:center;gap:8px;justify-content:flex-end;}
+  .lt-pill{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:20px;min-width:44px;text-align:center;}
+  .value-cell{display:flex;align-items:center;gap:10px;}
+  .value-cell .bar-track{flex:1;}
+  .value-cell .amt{font-family:'IBM Plex Mono',monospace;min-width:100px;text-align:right;color:var(--ink);}
+  .age-count-cell{text-align:center;}
+  .age-count-pill{
+    display:inline-block;min-width:26px;padding:3px 8px;border-radius:20px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  }
+  .age-count-zero{color:var(--ink-soft);opacity:.35;}
+
+  .stage-board-wrap{overflow-x:auto;}
+  table.stage-board{border-collapse:collapse;font-size:12.5px;width:100%;min-width:760px;}
+  table.stage-board th, table.stage-board td{border:1px solid var(--line);padding:7px 10px;text-align:center;}
+  table.stage-board thead tr.grp th{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:12.5px;background:var(--line-soft);color:var(--ink);
+  }
+  table.stage-board thead tr.sub th{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);font-weight:500;background:#F7F8F9;
+  }
+  table.stage-board tbody th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-soft);background:#F7F8F9;white-space:nowrap;
+  }
+  table.stage-board td.jobs-cell{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+  table.stage-board td.value-cell-stage{font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);}
+  table.stage-board td.jobs-cell.clickable{cursor:pointer;}
+  table.stage-board td.jobs-cell.clickable:hover{background:#EAF1FB;color:var(--primary);}
+  .stage-board-note{margin-top:10px;font-size:11.5px;color:var(--ink-soft);font-style:italic;display:none;}
+
+  .stage-filter-badge{
+    display:none;align-items:center;gap:10px;font-size:12.5px;color:var(--primary);
+    background:#EAF1FB;border:1px solid #c9dcf4;border-radius:8px;padding:8px 14px;margin-bottom:14px;
+  }
+  .clear-filter-btn{
+    font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;background:none;border:1px solid #c9dcf4;
+    border-radius:6px;padding:3px 9px;color:var(--primary);cursor:pointer;
+  }
+  .clear-filter-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+  .aging-cell{cursor:pointer;}
+  .aging-cell:hover .aging-num{color:var(--primary);text-decoration:underline;}
+
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(15,23,32,.5);z-index:1000;
+    align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--surface);border-radius:12px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;
+    padding:22px 24px 24px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+  .modal-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px;}
+  .modal-header h3{font-family:'Space Grotesk',sans-serif;font-size:17px;margin:0;}
+  .modal-sub{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+  .modal-close{
+    background:none;border:none;font-size:22px;line-height:1;color:var(--ink-soft);cursor:pointer;padding:2px 6px;border-radius:6px;
+  }
+  .modal-close:hover{background:var(--line-soft);color:var(--ink);}
+
+  .stage-block{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:14px;}
+  .stage-block-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .stage-name{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;}
+  .stage-target{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .stage-bar-track{background:var(--line-soft);border-radius:5px;height:8px;overflow:hidden;}
+  .stage-bar-fill{height:100%;border-radius:5px;}
+  .stage-block-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:9px;}
+  .stage-state-pill{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;}
+  .stage-duration{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;}
+  .stage-dates{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-top:7px;}
+
+  .split{display:flex;gap:14px;}
+  .split-block{flex:1;background:var(--line-soft);border-radius:8px;padding:16px;text-align:center;}
+  .split-block .n{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;}
+  .split-block .t{font-size:11.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;font-family:'IBM Plex Mono',monospace;margin-top:4px;}
+
+  .aging-buckets{display:flex;gap:10px;align-items:flex-start;margin-top:6px;}
+  .aging-buckets .col{flex:1;display:flex;flex-direction:column;align-items:center;}
+  .aging-buckets .col .bar-area{height:120px;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;}
+  .aging-buckets .col .stack-bar{width:100%;border-radius:5px 5px 0 0;overflow:hidden;display:flex;flex-direction:column;}
+  .aging-buckets .col .stack-bar .seg{width:100%;}
+  .aging-buckets .col .lab{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin-top:6px;text-align:center;}
+  .aging-buckets .col .cnt{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;margin-bottom:4px;}
+  .cat-breakdown{margin-top:9px;display:flex;flex-direction:column;gap:3px;align-items:center;}
+  .cat-line{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;}
+
+  /* ---- Table ---- */
+  .table-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px 8px;}
+  .table-head-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-soft);border-bottom:1.5px solid var(--ink);padding:8px 10px;cursor:pointer;white-space:nowrap;user-select:none;
+  }
+  thead th:hover{color:var(--primary);}
+  thead th .arrow{opacity:.5;font-size:9px;margin-left:3px;}
+  tbody td{padding:9px 10px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
+  tbody tr:hover{background:#F6F8F9;}
+  td.mono, .wo-no{font-family:'IBM Plex Mono',monospace;}
+  td.num{text-align:right;font-family:'IBM Plex Mono',monospace;}
+  .product-name{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:var(--ink-soft);font-size:11.5px;margin-top:2px;}
+
+  .chip{display:inline-block;padding:3px 9px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.03em;font-weight:600;white-space:nowrap;}
+  .chip-fg{background:#E4F0E6;color:var(--green);}
+  .chip-plan{background:#E7ECF3;color:var(--primary);}
+  .chip-warn{background:#FBEBD6;color:var(--amber);}
+  .chip-crit{background:#F6DEDC;color:var(--red);}
+  .chip-other{background:#EDEDED;color:var(--ink-soft);}
+
+  .aging-cell{display:flex;align-items:center;gap:8px;min-width:110px;}
+  .aging-strip{width:56px;height:8px;border-radius:4px;background:var(--line-soft);overflow:hidden;}
+  .aging-strip i{display:block;height:100%;}
+  .aging-num{font-family:'IBM Plex Mono',monospace;font-size:12px;min-width:30px;}
+  .remarks-flag{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;margin-left:4px;border-radius:3px;background:#EDE3F5;color:#7B3FA0;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;}
+
+  .row-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+
+  footer{margin-top:26px;font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;text-align:center;}
+
+  @media (max-width:900px){
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .grid2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="topnav">
+  <div class="topnav-inner">
+    <div class="brand"><span class="brand-mark"></span>YUNO PACKAGING PVT. LTD.<span class="brand-sub">Pharma Division</span></div>
+    <div class="topnav-right"><span class="live-dot"></span>LIVE DASHBOARD</div>
+  </div>
+</div>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="eyebrow"><span class="mark"></span>Production &amp; Fulfillment Analytics</div>
+      <h1>Pending Orders Dashboard</h1>
+      <div class="updated" id="updated-line"></div>
+      <div class="data-source" id="data-source-line"></div>
+      <button class="reset-link" id="reset-data-btn" style="display:none;">Reset to sample data</button>
+    </div>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search WO no. / customer / product…">
+      <select id="status-filter"><option value="">All statuses</option></select>
+      <select id="customer-filter"><option value="">All customers</option></select>
+      <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none;">
+      <button class="btn" id="import-btn">⬆ Import Excel</button>
+      <button class="btn" id="export-btn">⬇ Export Dashboard</button>
+      <button class="btn" id="refresh-shared-btn">🔄 Refresh Data</button>
+      <button class="btn btn-primary" id="print-btn">🖨 Print / PDF</button>
+      <button class="btn btn-primary" id="install-app-btn" style="display:none;">📲 Install App</button>
+    </div>
+  </header>
+
+  <div class="import-notice" id="import-notice"></div>
+
+  <section class="kpis">
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#E7EEFA;color:var(--primary);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h6M9 7h6"/></svg>
+        </div>
+        <div class="label">Total Pending Orders</div>
+      </div>
+      <div class="value" id="kpi-orders">—</div>
+      <div class="sub" id="kpi-orders-sub">work orders open</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#E5F1F2;color:var(--cyan);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>
+        </div>
+        <div class="label">Total Pending Qty</div>
+      </div>
+      <div class="value" id="kpi-qty">—</div>
+      <div class="sub">units across all orders</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#E7F3EC;color:var(--green);font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;">₹</div>
+        <div class="label">Total Pending Value</div>
+      </div>
+      <div class="value" id="kpi-value">—</div>
+      <div class="sub">₹ outstanding</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#FBEFDD;color:var(--amber);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        </div>
+        <div class="label">Avg / Oldest Aging</div>
+      </div>
+      <div class="value" id="kpi-aging">—</div>
+      <div class="sub" id="kpi-aging-sub">days pending</div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h2>Pending orders by status</h2>
+      <div class="panel-sub">Where each work order currently sits in the production stage</div>
+      <div class="bar-row" style="margin-bottom:6px;">
+        <div></div><div></div>
+        <div class="count" style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;">Jobs</div>
+        <div class="rowval" style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;">Value</div>
+      </div>
+      <div id="status-bars"></div>
+    </div>
+    <div class="panel">
+      <h2>Job type split</h2>
+      <div class="panel-sub">New vs. repeat work orders</div>
+      <div class="split" id="job-split"></div>
+      <h2 style="margin-top:22px;">Aging distribution</h2>
+      <div class="panel-sub">Days since work order was raised</div>
+      <div class="aging-buckets" id="aging-buckets"></div>
+    </div>
+  </section>
+
+  <section class="grid2" style="grid-template-columns:1fr;">
+    <div class="panel">
+      <h2>Production stage scoreboard</h2>
+      <div class="panel-sub">Job count and pending value per stage, split by days pending</div>
+      <div class="stage-board-wrap">
+        <table class="stage-board" id="stage-board"></table>
+      </div>
+      <div class="stage-board-note" id="stage-board-note"></div>
+    </div>
+  </section>
+
+  <section class="grid2" style="grid-template-columns:1fr;">
+    <div class="panel">
+      <h2>Customers — aging report</h2>
+      <div class="panel-sub">Order count per customer, broken down by days pending</div>
+      <div class="cust-table-wrap">
+        <table class="cust-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th style="text-align:right;">Orders</th>
+              <th style="text-align:center;">0–7d</th>
+              <th style="text-align:center;">8–14d</th>
+              <th style="text-align:center;">14–30d</th>
+              <th style="text-align:center;">30+d</th>
+            </tr>
+          </thead>
+          <tbody id="customer-bars"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="table-panel">
+    <div class="table-head-row">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0;">All pending orders</h2>
+      <span class="row-count" id="row-count"></span>
+    </div>
+    <div class="stage-filter-badge" id="stage-filter-badge"></div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="wo_no">WO No. <span class="arrow"></span></th>
+            <th data-key="wo_date">WO Date <span class="arrow"></span></th>
+            <th data-key="customer">Customer <span class="arrow"></span></th>
+            <th data-key="job_type">Job Type <span class="arrow"></span></th>
+            <th data-key="status">Status <span class="arrow"></span></th>
+            <th data-key="pending_qty" style="text-align:right;">Pending Qty <span class="arrow"></span></th>
+            <th data-key="pending_value" style="text-align:right;">Pending Value (₹) <span class="arrow"></span></th>
+            <th data-key="aging">Aging <span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>Yuno Packaging Pvt. Ltd. — Pharma pending order details · Generated from uploaded workbook</footer>
+</div>
+
+<div class="modal-overlay" id="stage-modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h3 id="stage-modal-title"></h3>
+        <div class="modal-sub" id="stage-modal-sub"></div>
+      </div>
+      <button class="modal-close" id="stage-modal-close">×</button>
+    </div>
+    <div id="stage-modal-body"></div>
+  </div>
+</div>
+
+<script id="orders-data" type="application/json">[{"wo_no":"BN-2627/145","wo_date":"2026-04-17","delivery":"Indalavadi","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1047664","product_name":"1047664 -PRINTED CARTON HEALTHYLAX - PEG 3350 NF POWDER FOR ORAL LAXATIVE SOLUTION - 100S CARTON","ordered_qty":80000.0,"pending_qty":80000.0,"pending_value":2720000.0,"status":"CS END PENDING","aging":131.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/336","wo_date":null,"delivery":"Unspecified","customer":"ITC Limited","job_type":"New Job","product_code":"FPZF00102","product_name":"FPZF00102 - PRINTED MONOCARTON-VEGGIE PIZZA POCKET 340G RT","ordered_qty":7000.0,"pending_qty":null,"pending_value":49700.0,"status":"FG","aging":null,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/607","wo_date":"2026-06-09","delivery":"Unit-7, old","customer":"MEDREICH LIMITED","job_type":"Repeat Job","product_code":"1227499","product_name":"1227499 - PRINTED CARTON CHEMIST OWNCOUG C&F D/N CAP CRTN4X12-WOA","ordered_qty":10000.0,"pending_qty":10000.0,"pending_value":28620.0,"status":"FG","aging":78.0,"mrn_date":null,"grn_date":null,"printing_date":"2026-08-20","fg_date":"2026-08-25","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/0777","wo_date":"2026-06-23","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"Repeat Job","product_code":"113014496","product_name":"113014496 - PTD. CARTON - PAMIDRONATE DISODIUM FOR INFUSION 90MG (LYOPHILIZED)-1X10ML (PRE-PRINTED)","ordered_qty":4200.0,"pending_qty":4200.0,"pending_value":16800.0,"status":"CS END PENDING","aging":64.0,"mrn_date":null,"grn_date":"2026-06-26","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/782","wo_date":"2026-06-24","delivery":"Indalavadi","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1054390","product_name":"1054390 - PCT-OSELTA CAPS-75MG-1X10 S-SPI.,US-R3","ordered_qty":495000.0,"pending_qty":170000.0,"pending_value":217600.0,"status":"FG","aging":63.0,"mrn_date":"2026-06-26","grn_date":"2026-08-19","printing_date":"2026-08-19","fg_date":"2026-08-24","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/817","wo_date":"2026-06-27","delivery":"Bommasandra","customer":"ADCOCK INGRAM LIMITED","job_type":"Repeat Job","product_code":"1230173","product_name":"1230173 - ADCO-ATENOLOL TABLETS 50 MG 3 X 10S - CARTONS - WOA","ordered_qty":100000.0,"pending_qty":100000.0,"pending_value":109000.0,"status":"FG","aging":60.0,"mrn_date":"2026-06-27","grn_date":"2026-07-01","printing_date":"2026-07-30","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/834","wo_date":"2026-07-01","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"Repeat Job","product_code":"2107161","product_name":"2107161 - PRINTED CARTON OXCAPIN (OXCARBAZEPINE TABLETS 0.3G) 5X10S HETERO PHARM (BEIJING)","ordered_qty":263500.0,"pending_qty":263500.0,"pending_value":461125.0,"status":"FG","aging":56.0,"mrn_date":"2026-07-01","grn_date":"2026-07-08","printing_date":"2026-07-11","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/875","wo_date":"2026-07-02","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650012485","product_name":"650012485 -\u00a0 PRINTED CARTON POSACONAZOLE BIOCON 100MG GASTRO-RESISTANT\u00a0 TABLETS 8X12S - BPL0126-02","ordered_qty":5000.0,"pending_qty":5000.0,"pending_value":34500.0,"status":"CS END PENDING","aging":55.0,"mrn_date":"2026-07-02","grn_date":"2026-07-03","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/876","wo_date":"2026-07-02","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650012486","product_name":"650012486 - PRINTED CARTON POSACONAZOLE BIOCON 100MG GASTRO-RESISTANT TABLETS 2X12 S - BPL0125/02","ordered_qty":12000.0,"pending_qty":12000.0,"pending_value":54720.0,"status":"CS END PENDING","aging":55.0,"mrn_date":"2026-07-02","grn_date":"2026-07-03","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/926","wo_date":"2026-07-07","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"Repeat Job","product_code":"2104936","product_name":"2104936 - PLAIN CARTON (45X55X90MM)","ordered_qty":5000.0,"pending_qty":5000.0,"pending_value":21750.0,"status":"FG","aging":50.0,"mrn_date":"2026-07-08","grn_date":"2026-07-10","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/991","wo_date":"2026-07-17","delivery":"Unit-7, old","customer":"MEDREICH LIMITED","job_type":"Repeat Job","product_code":"1227499","product_name":"1227499 - PRINTED CARTON CHEMIST OWNCOUG C&F D/N CAP CRTN4X12-WOA","ordered_qty":7100.0,"pending_qty":7100.0,"pending_value":20320.2,"status":"FG","aging":40.0,"mrn_date":"2026-07-21","grn_date":"2026-07-23","printing_date":"2026-08-20","fg_date":"2026-08-25","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/995","wo_date":"2026-07-17","delivery":"Pashamylaram Plant","customer":"GLAND PHARMA LIMITED","job_type":"Repeat Job","product_code":"1312001937-00","product_name":"1312001937-00 CTN EPINEPHRINE INJ USP 1MG/ML US GK","ordered_qty":11000.0,"pending_qty":11000.0,"pending_value":40700.0,"status":"FG","aging":40.0,"mrn_date":"2026-07-21","grn_date":"2026-07-22","printing_date":"2026-07-24","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/998","wo_date":"2026-07-17","delivery":"Malur","customer":"Medopharm","job_type":"New Job","product_code":"PPCA2779","product_name":"PPCA2779 - PRINTED CARTON AUSTELL FUROSEMIDE 40 TAB BP 3X10S","ordered_qty":80000.0,"pending_qty":80000.0,"pending_value":104000.0,"status":"SCAP","aging":40.0,"mrn_date":"2026-07-23","grn_date":"2026-08-03","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1029","wo_date":"2026-07-20","delivery":"Bommasandra","customer":"ADCOCK INGRAM LIMITED","job_type":"Repeat Job","product_code":"1226334","product_name":"1226334 - COMPRAL PAIN\u00a0TABLETS - 48 X 2S - DISPLAY BOARD (FRONT & BACK)-WOA","ordered_qty":31000.0,"pending_qty":31000.0,"pending_value":224750.0,"status":"RM PENDING","aging":37.0,"mrn_date":"2026-07-21","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1064","wo_date":"2026-07-24","delivery":"Vemagal","customer":"Hetero Labs Limited","job_type":"Repeat Job","product_code":"2108156","product_name":"2108156 - PRINTED CAR PREGABALIN 25MG CAP 8X7S AMAR GB 01","ordered_qty":130000.0,"pending_qty":130000.0,"pending_value":299000.0,"status":"FG","aging":33.0,"mrn_date":"2026-07-25","grn_date":"2026-08-05","printing_date":"2026-08-05","fg_date":"2026-08-24","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1099","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650009483","product_name":"BPL0145/01 - CARTON EVEROLIMUS TABLETS 2.5MG 28S UKRAINE","ordered_qty":1000.0,"pending_qty":1000.0,"pending_value":9650.0,"status":"PUNCHING","aging":5.0,"mrn_date":"2026-07-30","grn_date":"2026-08-11","printing_date":"2026-08-25","fg_date":"2026-08-25","remarks":"2026-08-21 00:00:00","remarks_date":"2026-08-21"},{"wo_no":"BN-2627/1100","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650009484","product_name":"BPL0146/01 - CARTON EVEROLIMUS TABLETS 5MG 28S UKRAINE","ordered_qty":6000.0,"pending_qty":6000.0,"pending_value":38400.0,"status":"PUNCHING","aging":5.0,"mrn_date":"2026-07-30","grn_date":"2026-08-11","printing_date":"2026-08-25","fg_date":"2026-08-25","remarks":"2026-08-21 00:00:00","remarks_date":"2026-08-21"},{"wo_no":"BN-2627/1101","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650009485","product_name":"BPL0147/01 - PRD CARTON EVERO TABS 10MG 28S UKRAINE","ordered_qty":16000.0,"pending_qty":16000.0,"pending_value":70400.0,"status":"PUNCHING","aging":5.0,"mrn_date":"2026-07-30","grn_date":"2026-08-11","printing_date":"2026-08-25","fg_date":"2026-08-25","remarks":"2026-08-21 00:00:00","remarks_date":"2026-08-21"},{"wo_no":"BN-2627/1102","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650010176","product_name":"650010176-PRINTED\u00a0 CARTON OF MPA 360MG DR TABLETS ISRAEL (BPL0155/01)","ordered_qty":15000.0,"pending_qty":15000.0,"pending_value":58500.0,"status":"CS END PENDING","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-08-03","printing_date":null,"fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1103","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650010448","product_name":"650010448 - PRINTED CARTON AVROLEM\u00ae EVEROLIMUS 10 MG CARTON BPL0160/01","ordered_qty":2000.0,"pending_qty":2000.0,"pending_value":18400.0,"status":"PUNCHING","aging":5.0,"mrn_date":"2026-07-30","grn_date":"2026-08-11","printing_date":"2026-08-25","fg_date":"2026-08-25","remarks":"2026-08-21 00:00:00","remarks_date":"2026-08-21"},{"wo_no":"BN-2627/1104","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650012349","product_name":"650012349 - PRINTED CARTON POSACONAZOLE100MG 24 (BPL0207/01)","ordered_qty":1000.0,"pending_qty":1000.0,"pending_value":11500.0,"status":"CS END PENDING","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-08-03","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1106","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650016082","product_name":"650016082-CARTONS FOR TACROGRAF 0.25 (TACROLIMUS CAPSULES) IP 6X10S - BPL0295/02","ordered_qty":20500.0,"pending_qty":20500.0,"pending_value":76260.0,"status":"FG","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-08-07","printing_date":"2026-08-07","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1107","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650016887","product_name":"650016887 - PRINTED CARTON EVEROLIMUS TABLETS 5 MG 28S USA-02(BPL0181/02)","ordered_qty":10000.0,"pending_qty":10000.0,"pending_value":36000.0,"status":"FG","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-07-31","printing_date":"2026-08-03","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1108","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"Repeat Job","product_code":"650016892","product_name":"650016892-PRINTED CARTON EVEROLIMUS TABLETS 10 MG 28S USA-02 (BPL0183/02)","ordered_qty":12000.0,"pending_qty":12000.0,"pending_value":43200.0,"status":"FG","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-07-31","printing_date":"2026-08-03","fg_date":"2026-08-24","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1109","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"New Job","product_code":"650016884","product_name":"650016884 - PRINTED CARTON EVEROLIMUS TABLETS FOR ORAL SUSPENSION 3MG USA -02 (BPL0323/02)","ordered_qty":3000.0,"pending_qty":3000.0,"pending_value":13200.0,"status":"FG","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-07-31","printing_date":"2026-08-03","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1110","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"New Job","product_code":"650016885","product_name":"650016885 - PRINTED CARTON EVEROLIMUS TABLETS FOR ORAL SUSPENSION 2MG USA -02 (BPL0322/02)","ordered_qty":3000.0,"pending_qty":3000.0,"pending_value":13200.0,"status":"FG","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-07-31","printing_date":"2026-08-03","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1111","wo_date":"2026-07-29","delivery":"Bommasandra","customer":"Biocon Pharma Limited","job_type":"New Job","product_code":"650016886","product_name":"650016886 - PRINTED CARTON EVEROLIMUS TABLETS FOR ORAL SUSPENSION 5MG USA -02 (BPL0324/02)","ordered_qty":6000.0,"pending_qty":6000.0,"pending_value":26400.0,"status":"FG","aging":28.0,"mrn_date":"2026-07-30","grn_date":"2026-07-31","printing_date":"2026-08-03","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1117","wo_date":"2026-07-31","delivery":"Indalavadi","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1048507","product_name":"1048507 - PRINTED CARTON [150 X 86 X 112 MM]ARTEMETHER AND LUMEFANTRINE TABLETS[20 MG/120MG][COMBIART][30 X 24S][WHO][PFSCM][HOSPITAL PACK] [WITH SEPARATOR] [KRSG][ENG]","ordered_qty":10000.0,"pending_qty":10000.0,"pending_value":65500.0,"status":"FG","aging":26.0,"mrn_date":"2026-08-04","grn_date":"2026-08-05","printing_date":"2026-08-06","fg_date":"2026-08-26","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1121","wo_date":"2026-07-31","delivery":"Bannergatta","customer":"ONESOURCE SPECIALTY PHARMA LTD.,","job_type":"Repeat Job","product_code":"1200013202-01","product_name":"[228X91X82MM] PIPERACILLIN AND TAZOBACTAM FOR INJECTION","ordered_qty":8000.0,"pending_qty":8000.0,"pending_value":80960.0,"status":"FG","aging":26.0,"mrn_date":"2026-08-04","grn_date":"2026-08-11","printing_date":"2026-08-14","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1122","wo_date":"2026-07-31","delivery":"Bannergatta","customer":"ONESOURCE SPECIALTY PHARMA LTD.,","job_type":"Repeat Job","product_code":"1200008624-01","product_name":"1200008624-01 - PT-WT CFBB 220X88X65 MM300/270 GSM AR4X1","ordered_qty":24000.0,"pending_qty":24000.0,"pending_value":50400.0,"status":"FG","aging":26.0,"mrn_date":"2026-08-04","grn_date":"2026-08-07","printing_date":"2026-08-07","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1136","wo_date":"2026-08-01","delivery":"Unspecified","customer":"ORBION PHARMACEUTICALS PRIVATE LIMITED","job_type":"Repeat Job","product_code":"949129282","product_name":"CRT GRANISETRON 1MG TAB 20 BION R5","ordered_qty":15000.0,"pending_qty":15000.0,"pending_value":40500.0,"status":"FG","aging":24.2965277777985,"mrn_date":"2026-08-03","grn_date":"2026-08-04","printing_date":"2026-08-07","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1137","wo_date":"2026-08-01","delivery":"Unspecified","customer":"Medopharm","job_type":"Repeat Job","product_code":"PCT0234/04","product_name":"PCT0234/04 -\u00a0 PHILCO CIPRO 500 12X10 CART PHILCO / 04","ordered_qty":52000.0,"pending_qty":26300.0,"pending_value":78900.0,"status":"RM PENDING","aging":24.2951388888978,"mrn_date":"2026-08-03","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1181","wo_date":"2026-08-03","delivery":"Hyderabad","customer":"Aspiro Pharma Limited","job_type":"New Job","product_code":"2092601 / 21002835","product_name":"2092601 / 21002835 - PRINTED CAR PANTIN 40MG/VIAL INJ 10S CAMB KZ01","ordered_qty":18000.0,"pending_qty":18000.0,"pending_value":74700.0,"status":"PUNCHING","aging":19.0,"mrn_date":"2026-08-06","grn_date":"2026-08-10","printing_date":"2026-08-17","fg_date":null,"remarks":"2026-08-07 00:00:00","remarks_date":"2026-08-07"},{"wo_no":"BN-2627/1182","wo_date":"2026-08-03","delivery":"Hyderabad","customer":"Aspiro Pharma Limited","job_type":"New Job","product_code":"2092683 / 21003030","product_name":"2092683 / 21003030 - PRINTED CAR CYTOVAN500MG(VA500MG/VI)INJ10HE ZA01","ordered_qty":2000.0,"pending_qty":2000.0,"pending_value":23000.0,"status":"PLANNED","aging":19.0,"mrn_date":"2026-08-06","grn_date":"2026-08-10","printing_date":null,"fg_date":"2026-08-27","remarks":"2026-08-07 00:00:00","remarks_date":"2026-08-07"},{"wo_no":"BN-2627/1183","wo_date":"2026-08-03","delivery":"Hyderabad","customer":"Aspiro Pharma Limited","job_type":"New Job","product_code":"2093374","product_name":"2093374 - PRINTED CAR LIDOCA.1% 20MG/2ML INJ 10S CAMB US01","ordered_qty":15000.0,"pending_qty":15000.0,"pending_value":46500.0,"status":"PUNCHING","aging":19.0,"mrn_date":"2026-08-06","grn_date":"2026-08-10","printing_date":"2026-08-22","fg_date":"2026-08-27","remarks":"2026-08-07 00:00:00","remarks_date":"2026-08-07"},{"wo_no":"BN-2627/1185","wo_date":"2026-08-03","delivery":"Hyderabad","customer":"Aspiro Pharma Limited","job_type":"New Job","product_code":"2108135","product_name":"2108135 - PRINTED CAR ESOMEPRA.40MG/VI INJ1S CAMB BR 20MM","ordered_qty":12000.0,"pending_qty":12000.0,"pending_value":48000.0,"status":"PUNCHING","aging":19.0,"mrn_date":"2026-08-06","grn_date":"2026-08-10","printing_date":"2026-08-22","fg_date":"2026-08-27","remarks":"2026-08-07 00:00:00","remarks_date":"2026-08-07"},{"wo_no":"BN-2627/1186","wo_date":"2026-08-03","delivery":"Unit-7, old","customer":"MEDREICH LIMITED","job_type":"Repeat Job","product_code":"1228016-V1","product_name":"1228016 - BISOPROLOL TAB 10 MG CRTN 2X14S WOA-MDUK","ordered_qty":74700.0,"pending_qty":74700.0,"pending_value":102458.52,"status":"CS END PENDING","aging":23.0,"mrn_date":"2026-08-05","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1187","wo_date":"2026-08-03","delivery":"Pondy","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"New Job","product_code":"1054208","product_name":"1054208 - PCT-METFORMIN-1000MG-6X10S-LYOMET-R1","ordered_qty":25000.0,"pending_qty":25000.0,"pending_value":101250.0,"status":"PUNCHING","aging":6.0,"mrn_date":"2026-08-11","grn_date":"2026-08-21","printing_date":"2026-08-25","fg_date":"2026-08-28","remarks":"2026-08-20 00:00:00","remarks_date":"2026-08-20"},{"wo_no":"BN-2627/1188","wo_date":"2026-08-03","delivery":"Pondy","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"New Job","product_code":"1054446","product_name":"1054446 - PCT-GABAPENTIN TAB-600MG-10X10S-SPUK-R4","ordered_qty":45000.0,"pending_qty":45000.0,"pending_value":202500.0,"status":"PLANNED","aging":4.0,"mrn_date":"2026-08-11","grn_date":"2026-08-21","printing_date":null,"fg_date":null,"remarks":"2026-08-22 00:00:00","remarks_date":"2026-08-22"},{"wo_no":"BN-2627/1190","wo_date":"2026-08-05","delivery":"Unspecified","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1050830","product_name":"1050830 - PCT-ROSUVA TAB-40MG-3X10S-AUS-ARROTEX-R2","ordered_qty":65000.0,"pending_qty":65000.0,"pending_value":132600.0,"status":"PUNCHING","aging":20.2666666666992,"mrn_date":"2026-08-06","grn_date":"2026-08-11","printing_date":"2026-08-25","fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1192","wo_date":"2026-08-05","delivery":"Unspecified","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1050842","product_name":"1050842 - PCT-ROSUVA TABS-20MG-3X10S-AROTEX-AUS-R3","ordered_qty":125000.0,"pending_qty":125000.0,"pending_value":210000.0,"status":"PUNCHING","aging":20.2624999999971,"mrn_date":"2026-08-06","grn_date":"2026-08-22","printing_date":"2026-08-24","fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1193","wo_date":"2026-08-05","delivery":"Unspecified","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1050843","product_name":"1050843 - PCT-ROSUVA TAB-10MG-3X10S-ARROTEX-AUS-R3","ordered_qty":235000.0,"pending_qty":235000.0,"pending_value":394800.0,"status":"FG","aging":20.2604166667006,"mrn_date":"2026-08-06","grn_date":"2026-08-22","printing_date":"2026-08-24","fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1195","wo_date":"2026-08-05","delivery":"Unspecified","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1050167","product_name":"1050167 - PCT-ROSUVA TAB-40MG-3X10S-WAGNER,AUS","ordered_qty":200000.0,"pending_qty":200000.0,"pending_value":314000.0,"status":"FG","aging":20.2437500000015,"mrn_date":"2026-08-06","grn_date":"2026-08-11","printing_date":"2026-08-13","fg_date":"2026-08-24","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1200","wo_date":"2026-08-05","delivery":"Unspecified","customer":"Annora Pharma Private Limited","job_type":"Repeat Job","product_code":"2094117","product_name":"PRT CAR\u00a0 EPLERENON AMAROX 25MG(EPLERENONEAMAROX 25MG FILM COATED TABLETS) 10X10S AMAROX GERMANY","ordered_qty":155000.0,"pending_qty":155000.0,"pending_value":285200.0,"status":"FG","aging":20.2347222222015,"mrn_date":"2026-08-06","grn_date":"2026-08-17","printing_date":"2026-08-18","fg_date":"2026-08-26","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1203","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"Repeat Job","product_code":"113010499","product_name":"113010499 - PTD. OUTER CARTON -TRAMADOL HYDROCHLORIDE INJECTION 100MG / 2ML - 10X10X2 ML (GT)","ordered_qty":1500.0,"pending_qty":21150.0,"pending_value":21150.0,"status":"FG","aging":20.0,"mrn_date":"2026-08-07","grn_date":"2026-08-10","printing_date":"2026-08-17","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1208","wo_date":"2026-08-06","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"New Job","product_code":"2111674","product_name":"2111674-PRINTED CARTON COLCHICINE AMAROX 0.6MG (COLCHICINE CAPSULES 0.6MG)10X10S AMAROX SAUDI ARABIA","ordered_qty":6000.0,"pending_qty":66000.0,"pending_value":66000.0,"status":"PRINTING","aging":13.0,"mrn_date":"2026-08-19","grn_date":"2026-08-19","printing_date":null,"fg_date":null,"remarks":"2026-08-13 00:00:00","remarks_date":"2026-08-13"},{"wo_no":"BN-2627/1209","wo_date":"2026-08-06","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"New Job","product_code":"2111350","product_name":"2111350 - PRINTED CARTON IVATAB 7.5MG (IVABRADINE TABLETS 7.5MG) 3X10S SEVEN PHARMA HONDURAS","ordered_qty":2000.0,"pending_qty":22000.0,"pending_value":22000.0,"status":"PLANNING","aging":1.0,"mrn_date":"2026-08-19","grn_date":"2026-08-19","printing_date":null,"fg_date":null,"remarks":"2026-08-25 00:00:00","remarks_date":"2026-08-25"},{"wo_no":"BN-2627/1210","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113008130","product_name":"PTD.CARTON- DOLARTRIN VITAMINADO (DICLOFENAC POTASSIUM&NEUROTROPAS SOFT GELATIN CAPSULES)25X1X4S(ES)","ordered_qty":5000.0,"pending_qty":71500.0,"pending_value":71500.0,"status":"PRINTING","aging":13.0,"mrn_date":"2026-08-20","grn_date":"2026-08-21","printing_date":null,"fg_date":null,"remarks":"2026-08-13 00:00:00","remarks_date":"2026-08-13"},{"wo_no":"BN-2627/1211","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113011420","product_name":"113011420 - PTD. CARTON - ORPHENADRINE CITRATE INJECTABLE SOLUTION 30MG/ML - 2ML - 10X10S (ES)","ordered_qty":2500.0,"pending_qty":35000.0,"pending_value":35000.0,"status":"PRINTING","aging":14.0,"mrn_date":"2026-08-19","grn_date":"2026-08-19","printing_date":null,"fg_date":null,"remarks":"2026-08-12 00:00:00","remarks_date":"2026-08-12"},{"wo_no":"BN-2627/1212","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113012557","product_name":"113012557 - PTD. CARTON- CURONER (MECOBALAMINE INJECTABLE SOLUTION 500MCG/ML) PFS - 1X1S (ES CAPLIN)","ordered_qty":23500.0,"pending_qty":61100.0,"pending_value":61100.0,"status":"PRINTING","aging":14.0,"mrn_date":"2026-08-19","grn_date":"2026-08-19","printing_date":null,"fg_date":null,"remarks":"2026-08-12 00:00:00","remarks_date":"2026-08-12"},{"wo_no":"BN-2627/1213","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113008129","product_name":"PTD. CATCH COVER - DOLARTRIN VITAMINADO (DICLOFENAC POTASSIUM AND NEUROTROPAS SOFT GELATIN CAPSULES)","ordered_qty":125200.0,"pending_qty":116436.0,"pending_value":116436.0,"status":"CS END PENDING","aging":20.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1214","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113014824","product_name":"PTD. CATCH COVER- DOLFIX GELCAPS (DICLOFENAC POTASSIUM SOFT GELATIN CAPSULES 100MG) (PRE-PRINTED)","ordered_qty":500000.0,"pending_qty":410000.0,"pending_value":410000.0,"status":"CS END PENDING","aging":14.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":"2026-08-12 00:00:00","remarks_date":"2026-08-12"},{"wo_no":"BN-2627/1215","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113006819","product_name":"113006819 - PTD.OUTER CARTON - DOLARTRIN (INDOMETACIN CAPSULES 25MG) - 25X1X4S (ES)","ordered_qty":10000.0,"pending_qty":82600.0,"pending_value":82600.0,"status":"PLANNED","aging":14.0,"mrn_date":"2026-08-19","grn_date":"2026-08-19","printing_date":null,"fg_date":"2026-08-27","remarks":"2026-08-12 00:00:00","remarks_date":"2026-08-12"},{"wo_no":"BN-2627/1216","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"Repeat Job","product_code":"113014691","product_name":"113014691 - PTD. CARTON - LAMOTRIGINE TABLETS 100MG - 6X10S (CHILE-NEOETHICALS)","ordered_qty":199000.0,"pending_qty":270640.0,"pending_value":270640.0,"status":"FG","aging":20.0,"mrn_date":"2026-08-07","grn_date":"2026-08-14","printing_date":"2026-08-19","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1217","wo_date":"2026-08-06","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113006818","product_name":"113006818 - PTD.CATCH COVER - DOLARTRIN (INDOMETACIN CAPSULES 25MG) - 1X4S (ES) (PRE-PRINTED)","ordered_qty":247000.0,"pending_qty":301340.0,"pending_value":301340.0,"status":"PRINTING","aging":14.0,"mrn_date":"2026-08-19","grn_date":null,"printing_date":null,"fg_date":null,"remarks":"2026-08-12 00:00:00","remarks_date":"2026-08-12"},{"wo_no":"BN-2627/1222","wo_date":"2026-08-06","delivery":"Bommasandra","customer":"SYNGENE INTERNATIONAL LTD","job_type":"New Job","product_code":"680001330","product_name":"680001330 - MONO-CARTON FOR 6R VIAL|L-30XW-30XH-55MM|30X30X55MM 300CFBB TUCK IN TYPE|PLAIN CARTON","ordered_qty":200.0,"pending_qty":7500.0,"pending_value":7500.0,"status":"PUNCHING","aging":12.0,"mrn_date":"2026-08-21","grn_date":"2026-08-24","printing_date":null,"fg_date":null,"remarks":"2026-08-14 00:00:00","remarks_date":"2026-08-14"},{"wo_no":"BN-2627/1223","wo_date":"2026-08-06","delivery":"Bommasandra","customer":"SYNGENE INTERNATIONAL LTD","job_type":"New Job","product_code":"680001331","product_name":"680001331 -MONO-CARTON FOR 3 ML VIAL|L-30XW-30X H-43MM|30X30X43MM 300CFBB| TUCK IN TYPE|PLAIN CARTON","ordered_qty":200.0,"pending_qty":7000.0,"pending_value":7000.0,"status":"PUNCHING","aging":12.0,"mrn_date":"2026-08-21","grn_date":"2026-08-24","printing_date":null,"fg_date":null,"remarks":"2026-08-14 00:00:00","remarks_date":"2026-08-14"},{"wo_no":"BN-2627/1224","wo_date":"2026-08-06","delivery":"Bommasandra","customer":"SYNGENE INTERNATIONAL LTD","job_type":"New Job","product_code":"680001332","product_name":"680001332 +OUTER CARTON FOR 3 ML VIAL155X155X91MM350CFBB+ LOCK BOTTOM WITH MIDDLE LAYER|PLAIN CARTON","ordered_qty":20.0,"pending_qty":19500.0,"pending_value":19500.0,"status":"PUNCHING","aging":12.0,"mrn_date":"2026-08-21","grn_date":"2026-08-24","printing_date":null,"fg_date":null,"remarks":"2026-08-14 00:00:00","remarks_date":"2026-08-14"},{"wo_no":"BN-2627/1225","wo_date":"2026-08-06","delivery":"Bommasandra","customer":"SYNGENE INTERNATIONAL LTD","job_type":"New Job","product_code":"680001333","product_name":"OUTER CARTON FOR 6 R VIAL|155X155X115 MM 350CFBB+ LOCK BOTTOM WITH MIDDLE LAYER|PLAIN CARTON","ordered_qty":20.0,"pending_qty":20000.0,"pending_value":20000.0,"status":"PUNCHING","aging":12.0,"mrn_date":"2026-08-21","grn_date":"2026-08-24","printing_date":null,"fg_date":null,"remarks":"2026-08-14 00:00:00","remarks_date":"2026-08-14"},{"wo_no":"BN-2627/1231","wo_date":"2026-08-07","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2113202","product_name":"2113202 - PRINTED CARTON FOR IMATEN 400MG (IMATINIB TABLETS 400MG) 3X10S ELIXIR PHARMA EGYPT","ordered_qty":10000.0,"pending_qty":10000.0,"pending_value":40000.0,"status":"PUNCHING","aging":19.0,"mrn_date":"2026-08-11","grn_date":"2026-08-13","printing_date":"2026-08-21","fg_date":"2026-08-27","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1233","wo_date":"2026-08-07","delivery":"Bommasandra","customer":"ADCOCK INGRAM LIMITED","job_type":"Repeat Job","product_code":"1229703","product_name":"1229703 - PRINTED CARTON IBUDEINE TABLETS PRINTED CARTON 3X10S","ordered_qty":33000.0,"pending_qty":33000.0,"pending_value":66330.0,"status":"FG","aging":19.0,"mrn_date":"2026-08-10","grn_date":"2026-08-11","printing_date":"2026-08-17","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1246","wo_date":"2026-08-10","delivery":"Chennai","customer":"PAR FORMULATIONS PVT.LTD.","job_type":"Repeat Job","product_code":"8501080","product_name":"ZOLPIDEM TART SL TAB TIME TOOL","ordered_qty":16000.0,"pending_qty":16000.0,"pending_value":70400.0,"status":"PUNCHING","aging":16.0,"mrn_date":"2026-08-10","grn_date":"2026-08-13","printing_date":"2026-08-21","fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1254","wo_date":"2026-08-12","delivery":"Bommasandra","customer":"SYNGENE INTERNATIONAL LTD","job_type":"Repeat Job","product_code":"680001156","product_name":"680001156 - PLAIN CARTON REVERSE TUCKING (L-88XW-63XH-28MM)","ordered_qty":75000.0,"pending_qty":75000.0,"pending_value":96000.0,"status":"PUNCHING","aging":14.0,"mrn_date":"2026-08-13","grn_date":"2026-08-21","printing_date":"2026-08-21","fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1255","wo_date":"2026-08-12","delivery":"Indalavadi","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1052737","product_name":"1052737 - PCT- KCL OS-20MEQ-100S-KESIN PHARMA-US","ordered_qty":5000.0,"pending_qty":5000.0,"pending_value":41700.0,"status":"PUNCHING","aging":14.0,"mrn_date":"2026-08-13","grn_date":"2026-08-17","printing_date":"2026-08-25","fg_date":"2026-08-27","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1256","wo_date":"2026-08-12","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"New Job","product_code":"113015098","product_name":"113015098 - PTD. CARTON - LOSARTAN POTASSIUM TABLETS 50MG - 3X10S (CHILE-NEOETHICALS)","ordered_qty":100200.0,"pending_qty":100200.0,"pending_value":99198.0,"status":"FG","aging":14.0,"mrn_date":"2026-08-19","grn_date":"2026-08-19","printing_date":"2026-08-22","fg_date":"2026-08-27","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1266","wo_date":"2026-08-13","delivery":"Sriperumbudur","customer":"ORBION PHARMACEUTICALS PRIVATE LIMITED","job_type":"Repeat Job","product_code":"949129346","product_name":"949129346 - PTD CRT OXCARBAZEPINE OS 250ML PET-BION","ordered_qty":20000.0,"pending_qty":20000.0,"pending_value":125000.0,"status":"RM PENDING","aging":13.0,"mrn_date":"2026-08-14","grn_date":null,"printing_date":null,"fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1267","wo_date":"2026-08-13","delivery":"Sriperumbudur","customer":"ORBION PHARMACEUTICALS PRIVATE LIMITED","job_type":"Repeat Job","product_code":"949129345","product_name":"949129345 - CRT,PRINTED,PYRANTEL OS,60ML, BION-R1","ordered_qty":30000.0,"pending_qty":30000.0,"pending_value":122400.0,"status":"RM PENDING","aging":13.0,"mrn_date":"2026-08-14","grn_date":null,"printing_date":null,"fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1268","wo_date":"2026-08-13","delivery":"Sriperumbudur","customer":"ORBION PHARMACEUTICALS PRIVATE LIMITED","job_type":"Repeat Job","product_code":"949129349","product_name":"949129349 - CRT, PRINTED,PYRANTAL OS,30ML,GNP","ordered_qty":12000.0,"pending_qty":12000.0,"pending_value":66600.0,"status":"FG","aging":13.0,"mrn_date":"2026-08-14","grn_date":"2026-08-18","printing_date":"2026-08-21","fg_date":"2026-08-28","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1269","wo_date":"2026-08-13","delivery":"Sriperumbudur","customer":"ORBION PHARMACEUTICALS PRIVATE LIMITED","job_type":"Repeat Job","product_code":"949129350","product_name":"949129350 - CRT,PRINTED,PYRANTAL OS,30ML,MCKESSON","ordered_qty":8000.0,"pending_qty":8000.0,"pending_value":44400.0,"status":"FG","aging":13.0,"mrn_date":"2026-08-17","grn_date":"2026-08-18","printing_date":"2026-08-21","fg_date":"2026-08-28","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1270","wo_date":"2026-08-13","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"Repeat Job","product_code":"2080857","product_name":"2080857 - PRINTED CARTON FOR LETROLE\u00a0 (LETROZOLE TABLETS 2.5MG) 3X10S SEVEN PHARMA\u00a0 ECUADOR","ordered_qty":10000.0,"pending_qty":10000.0,"pending_value":33000.0,"status":"FG","aging":13.0,"mrn_date":"2026-08-17","grn_date":"2026-08-18","printing_date":"2026-08-20","fg_date":"2026-08-28","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1272","wo_date":"2026-08-13","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"Repeat Job","product_code":"2104828","product_name":"2104828 - PRINTED CARTON LORATADINE 10MG TABLETS USP 100S CAMBER USA","ordered_qty":145000.0,"pending_qty":145000.0,"pending_value":261000.0,"status":"PUNCHING","aging":13.0,"mrn_date":"2026-08-17","grn_date":"2026-08-21","printing_date":"2026-08-25","fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1274","wo_date":"2026-08-14","delivery":"Indalavadi","customer":"ONESOURCE SPECIALTY PHARMA LTD.,","job_type":"New Job","product_code":"1200012956","product_name":"1200012956 - PCT-COLECALCIFEROL CAP -2X10S-SPUK-R2 (STRIDES CODE: 1053117)","ordered_qty":60000.0,"pending_qty":60000.0,"pending_value":79200.0,"status":"PLANNED","aging":1.0,"mrn_date":"2026-08-19","grn_date":"2026-08-19","printing_date":null,"fg_date":null,"remarks":"2026-08-25 00:00:00","remarks_date":"2026-08-25"},{"wo_no":"BN-2627/1275","wo_date":"2026-08-14","delivery":"Tumkur Road","customer":"HIMALAYA WELLNESS COMPANY","job_type":"New Job","product_code":"5062746","product_name":"5062746 - CARTON LIV.52 DS TABLETS 60S CAMBODIA FSC","ordered_qty":12000.0,"pending_qty":12000.0,"pending_value":21360.0,"status":"SCAP","aging":12.0,"mrn_date":"2026-08-18","grn_date":"2026-08-19","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1276","wo_date":"2026-08-14","delivery":"Tumkur Road","customer":"HIMALAYA WELLNESS COMPANY","job_type":"New Job","product_code":"5063470","product_name":"5063470 - CARTON CYSTONE TABLETS (UC) 100S CAMBODIA FSC","ordered_qty":35000.0,"pending_qty":35000.0,"pending_value":59150.0,"status":"SCAP","aging":12.0,"mrn_date":"2026-08-18","grn_date":"2026-08-19","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1282","wo_date":"2026-08-14","delivery":"Chennai","customer":"Fourrts India Laboratories Pvt Ltd","job_type":"Repeat Job","product_code":"P1012/01","product_name":"P1012/01 - CETIRIZINE 10MG TABS CARTON 10S PACK","ordered_qty":55000.0,"pending_qty":55000.0,"pending_value":115500.0,"status":"FG","aging":12.0,"mrn_date":"2026-08-18","grn_date":"2026-08-19","printing_date":"2026-08-21","fg_date":"2026-08-26","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1283","wo_date":"2026-08-14","delivery":"Chennai","customer":"Fourrts India Laboratories Pvt Ltd","job_type":"Repeat Job","product_code":"P1013/01","product_name":"P1013/01 - CETIRIZINE 10MG TABS CARTON 30S PACK","ordered_qty":43000.0,"pending_qty":43000.0,"pending_value":98900.0,"status":"PUNCHING","aging":12.0,"mrn_date":"2026-08-18","grn_date":"2026-08-19","printing_date":"2026-08-22","fg_date":"2026-08-26","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1284","wo_date":"2026-08-14","delivery":"Chennai","customer":"Fourrts India Laboratories Pvt Ltd","job_type":"Repeat Job","product_code":"P1015/01","product_name":"P1015/01 - CETIRIZINE 10MG TABS CARTON 70S PACK","ordered_qty":65000.0,"pending_qty":65000.0,"pending_value":162500.0,"status":"PUNCHING","aging":12.0,"mrn_date":"2026-08-18","grn_date":"2026-08-19","printing_date":"2026-08-21","fg_date":"2026-08-26","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1292","wo_date":"2026-08-18","delivery":"Chandapura, Anekal Taluk","customer":"Strides Pharma Science Ltd -F4","job_type":"New Job","product_code":"1054229","product_name":"1054229 - PCT-GABA-WGR-100MG-10X10S-AUS","ordered_qty":32000.0,"pending_qty":32000.0,"pending_value":113280.0,"status":"SCAP","aging":8.0,"mrn_date":"2026-08-20","grn_date":"2026-08-21","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1293","wo_date":"2026-08-18","delivery":"Chandapura, Anekal Taluk","customer":"Strides Pharma Science Ltd -F4","job_type":"New Job","product_code":"1053035","product_name":"1053035 - PCT-AMITRPTYLN TABLETS 50MG-5X10S-WAGNER","ordered_qty":135000.0,"pending_qty":135000.0,"pending_value":182250.0,"status":"SC","aging":8.0,"mrn_date":"2026-08-20","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1294","wo_date":"2026-08-18","delivery":"Pondy","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"New Job","product_code":"1054883","product_name":"1054883 - PCT-IBU TAB400MG-1X12S-GNRCONSEIL-SDZ-FR","ordered_qty":230000.0,"pending_qty":230000.0,"pending_value":402500.0,"status":"SC","aging":8.0,"mrn_date":"2026-08-20","grn_date":"2026-08-21","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1295","wo_date":"2026-08-18","delivery":"Pondy","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"New Job","product_code":"1054886","product_name":"1054886 - PCT-IBU TAB200MG-2X10S-GNRCONSEIL-SDZ-FR","ordered_qty":72000.0,"pending_qty":72000.0,"pending_value":104400.0,"status":"SC","aging":8.0,"mrn_date":"2026-08-20","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1296","wo_date":"2026-08-18","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2098172","product_name":"2098172 - PRINTED CARTON FOR AZATERO 100 (AZACITIDINE FOR INJECTION 100MG/VIAL) 1S ZIMBABWE","ordered_qty":3000.0,"pending_qty":3000.0,"pending_value":22500.0,"status":"PLANNING","aging":2.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":"2026-08-24 00:00:00","remarks_date":"2026-08-24"},{"wo_no":"BN-2627/1297","wo_date":"2026-08-18","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2109877","product_name":"2109877 - PRINTED CARTON FOR PEMETREXED FOR INJECTION 500MG/VIAL 1S VIETNAM","ordered_qty":10000.0,"pending_qty":10000.0,"pending_value":37500.0,"status":"CS END PENDING","aging":8.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1298","wo_date":"2026-08-18","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2111033","product_name":"2111033 - PRINTED CARTON FOR LETROLE (LETROZOLE TABLETS 2.5MG) 3X10S SEVEN PHARMA ECUADOR","ordered_qty":15000.0,"pending_qty":15000.0,"pending_value":31500.0,"status":"CS END PENDING","aging":8.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1299","wo_date":"2026-08-18","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2112114","product_name":"2112114 - PRINTED CARTON FOR CARBOPLATIN 10MG/ML CONCENTRATE FOR INFUSION (450MG/45ML) SEVEN PHARMA","ordered_qty":4000.0,"pending_qty":4000.0,"pending_value":25600.0,"status":"CS END PENDING","aging":8.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1300","wo_date":"2026-08-18","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2112158","product_name":"2112158 - PRINTED CARTON FOR OXINJO 100 (OXALIPLATIN INJECTION USP 100MG/20ML) 1S SOUTH AFRICA","ordered_qty":4000.0,"pending_qty":4000.0,"pending_value":44000.0,"status":"PLANNING","aging":2.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":"2026-08-24 00:00:00","remarks_date":"2026-08-24"},{"wo_no":"BN-2627/1301","wo_date":"2026-08-18","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2112159","product_name":"2112159 - PRINTED CARTON FOR OXINJO 50 (OXALIPLATIN INJECTION USP 50MG/10ML) 1S SOUTH AFRICA","ordered_qty":3000.0,"pending_qty":3000.0,"pending_value":41850.0,"status":"PLANNING","aging":2.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":"2026-08-24 00:00:00","remarks_date":"2026-08-24"},{"wo_no":"BN-2627/1302","wo_date":"2026-08-18","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"New Job","product_code":"2112453","product_name":"2112453 - PRINTED CARTON FOR MUSTIBEN (BENDAMUSTINE HYDROCHLORIDE FOR INJECTION 100MG) 1S","ordered_qty":3000.0,"pending_qty":3000.0,"pending_value":43500.0,"status":"CS END PENDING","aging":8.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1303","wo_date":"2026-08-18","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"New Job","product_code":"2104884","product_name":"2104884 - CAR EMP.L25/5(E&L)TA3X10HEROH KETUNBMNZZ","ordered_qty":3500.0,"pending_qty":3500.0,"pending_value":28000.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":"2026-08-25 00:00:00","remarks_date":"2026-08-25"},{"wo_no":"BN-2627/1304","wo_date":"2026-08-18","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"New Job","product_code":"2104885","product_name":"2104885 - CAR EMP.L10/5(E&L)TA3X10HEROH KETUNBMNZZ","ordered_qty":3500.0,"pending_qty":3500.0,"pending_value":28000.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":"2026-08-25 00:00:00","remarks_date":"2026-08-25"},{"wo_no":"BN-2627/1306","wo_date":"2026-08-18","delivery":"Hyderabad","customer":"Annora Pharma Private Limited","job_type":"Repeat Job","product_code":"2111051","product_name":"2111051 - PRINTED CARTON LORATADINE TABLETS USP 10MG 300S CAMBER USA","ordered_qty":6000.0,"pending_qty":6000.0,"pending_value":31500.0,"status":"PRINTING","aging":8.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":"2026-08-29","remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1308","wo_date":"2026-08-18","delivery":"CP1, HFC Division","customer":"APL HEALTH CARE LIMITED","job_type":"Repeat Job","product_code":"P1056757","product_name":"P1056757 -\u00a0 PRINTED CARTON HYDROCORTIPUREN 10MG TABLETTEN (10X10 S) PUREN-GERMANY","ordered_qty":3090.0,"pending_qty":3090.0,"pending_value":26265.0,"status":"PRINTING","aging":8.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1333","wo_date":"2026-08-20","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"Repeat Job","product_code":"2085274","product_name":"2085274 - PRINTED CARTON FOR AZETGIL (AZACITIDINE FOR INJECTION 100MG/VIAL) 1S CAMBER KAZAKHSTAN","ordered_qty":3000.0,"pending_qty":3000.0,"pending_value":19950.0,"status":"PRINTING","aging":6.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1334","wo_date":"2026-08-20","delivery":"Dabaspet","customer":"Johnson & Smith Co.- U2","job_type":"New Job","product_code":"PM001129","product_name":"PM001129 - A+ HEALTH PYRANTEL PAMOATE TABLETS 36S COUNT","ordered_qty":25000.0,"pending_qty":25000.0,"pending_value":105000.0,"status":"SC/RM","aging":6.0,"mrn_date":"2026-08-25","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1335","wo_date":"2026-08-20","delivery":"C1P, Unit-3","customer":"AUROBINDO PHARMA LIMITED","job_type":"Repeat Job","product_code":"P1059138","product_name":"P1059138 -\u00a0 PRINTED CARTON LAMOTRIGIN AUROBINDO 100MG TABLETTEN (20X10S) PUREN-GERMANY","ordered_qty":52000.0,"pending_qty":52000.0,"pending_value":163800.0,"status":"PLANNED","aging":6.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1336","wo_date":"2026-08-20","delivery":"C1P, Unit-3","customer":"AUROBINDO PHARMA LIMITED","job_type":"Repeat Job","product_code":"P1059141","product_name":"P1059141 - PRINTED CARTON LAMOTRIGIN AUROBINDO 50 MG TABLETTEN (10X10S) PUREN-GERMANY","ordered_qty":4783.0,"pending_qty":4783.0,"pending_value":40655.5,"status":"PRINTING","aging":6.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1337","wo_date":"2026-08-20","delivery":"C1P, Unit-3","customer":"AUROBINDO PHARMA LIMITED","job_type":"Repeat Job","product_code":"P1059144","product_name":"P1059144 -\u00a0 PRINTED CARTON LAMOTRIGIN AUROBINDO 200MG TABLETTEN (10X10 S) PUREN-GERMANY","ordered_qty":4813.0,"pending_qty":4813.0,"pending_value":40910.5,"status":"PLANNED","aging":6.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1338","wo_date":"2026-08-20","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"Repeat Job","product_code":"113006603","product_name":"113006603 - PRINTED CARTON - PROPOFOL INJECTABLE EMULSION 10MG/ML 1X20ML 1S (CR GOVT) (PRE-PRINTED)","ordered_qty":206300.0,"pending_qty":206300.0,"pending_value":237245.0,"status":"CS END PENDING","aging":6.0,"mrn_date":"2026-08-21","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1339","wo_date":"2026-08-20","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"Repeat Job","product_code":"113012354","product_name":"113012354 - PTD. CARTON - VANCOMYCIN HYDROCHLORIDE POWDER FOR SOLUTION INJECTABLE 1000MG - 1X20ML (DR)","ordered_qty":5500.0,"pending_qty":5500.0,"pending_value":20075.0,"status":"PRINTING","aging":6.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1340","wo_date":"2026-08-20","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"Repeat Job","product_code":"113014538","product_name":"PTD. CARTON - ATOSIBAN INJECTABLE SOLUTION 37.5MG / 5ML - 1X5ML (CHILE-NEOETHICALS) (PRE-PRINTED)","ordered_qty":5300.0,"pending_qty":5300.0,"pending_value":43990.0,"status":"CS END PENDING","aging":6.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1341","wo_date":"2026-08-20","delivery":"Pondy","customer":"CAPLIN POINT LABORATORIES LTD-UNIT -1","job_type":"Repeat Job","product_code":"113011362","product_name":"113011362 - PTD. CARTON -NAPROXEN SODIUM 550MG TABLETS - 3X10S (EC)","ordered_qty":7000.0,"pending_qty":7000.0,"pending_value":11900.0,"status":"PRINTING","aging":6.0,"mrn_date":"2026-08-21","grn_date":"2026-08-22","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1342","wo_date":"2026-08-20","delivery":"Pondy","customer":"STRIDES PHARMA SCIENCE LIMITED","job_type":"Repeat Job","product_code":"1051130","product_name":"1051130 - PCT-METFORMIN PR 1000MG-6X10 S-ROMANIA","ordered_qty":31000.0,"pending_qty":31000.0,"pending_value":133610.0,"status":"RM PENDING","aging":6.0,"mrn_date":"2026-08-21","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1343","wo_date":"2026-08-21","delivery":"Bommasandra","customer":"ADCOCK INGRAM LIMITED","job_type":"Repeat Job","product_code":"1229366","product_name":"1229366 - PRINTED CARTON NUELIN SR 250MG TABLETS 5X20S CARTON PACK","ordered_qty":5500.0,"pending_qty":5500.0,"pending_value":18560.08,"status":"PRINTING","aging":5.0,"mrn_date":"2026-08-24","grn_date":"2026-08-25","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1344","wo_date":"2026-08-21","delivery":"Vemagal","customer":"Hetero Labs Limited","job_type":"Repeat Job","product_code":"2094162","product_name":"2094162 - PRINTED BLISTER CARTON FOR SERTRALIN AMAROX 100MG FILMTABLETTEN 10X10S\u00a0 AMAROX GERMANY","ordered_qty":85000.0,"pending_qty":85000.0,"pending_value":208250.0,"status":"PRINTING","aging":5.0,"mrn_date":"2026-08-24","grn_date":"2026-08-25","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1345","wo_date":"2026-08-21","delivery":"Vemagal","customer":"Hetero Labs Limited","job_type":"Repeat Job","product_code":"2094165","product_name":"2094165 - CAR SERTRA 50MG TAB 10X10S AMAR DE 2089","ordered_qty":115000.0,"pending_qty":115000.0,"pending_value":270250.0,"status":"RM PENDING","aging":5.0,"mrn_date":"2026-08-24","grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1346","wo_date":"2026-08-21","delivery":"JADCHERLA","customer":"HETERO LABS LIMITED [ UNIT V ]","job_type":"Repeat Job","product_code":"2062322","product_name":"2062322 - PTD CAR PPRINTED BLISTER CARTON FOR TAFNEXT (TENOFOVIR ALAFENAMIDE TABLETS 25MG) 3X10S PT. AMAROX PHARMA GLOBAL / INDONESIA","ordered_qty":2000.0,"pending_qty":2000.0,"pending_value":14600.0,"status":"PRINTING","aging":5.0,"mrn_date":"2026-08-24","grn_date":"2026-08-25","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1347","wo_date":"2026-08-21","delivery":"JADCHERLA","customer":"HETERO LABS LIMITED [ UNIT V ]","job_type":"Repeat Job","product_code":"2058434","product_name":"2058434 - PRINTED CARTON SILDENAFIL 50MG TAB 2X4S TARB ES","ordered_qty":7000.0,"pending_qty":7000.0,"pending_value":28000.0,"status":"PLANNED","aging":5.0,"mrn_date":"2026-08-24","grn_date":"2026-08-25","printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1352","wo_date":"2026-08-25","delivery":"JADCHERLA","customer":"HETERO LABS LTD. UNIT - VI","job_type":"Repeat Job","product_code":"2074397","product_name":"2074397 - PRINTED CAR IMATERO 100MG TAB 6X10S CAMB PH 01","ordered_qty":3000.0,"pending_qty":3000.0,"pending_value":20850.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1353","wo_date":"2026-08-25","delivery":"Vemagal","customer":"Hetero Labs Limited","job_type":"Repeat Job","product_code":"2094118","product_name":"2094118 - CAR SERTRAL 100MG TAB 3X10S AMAR NL 2089","ordered_qty":340000.0,"pending_qty":340000.0,"pending_value":510000.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1354","wo_date":"2026-08-25","delivery":"Chennai","customer":"Fourrts India Laboratories Pvt Ltd","job_type":"New Job","product_code":"P1014/01","product_name":"P1014/01 - CETIRIZINE 10MG TABS CARTON 50S PACK","ordered_qty":15000.0,"pending_qty":15000.0,"pending_value":58500.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1355","wo_date":"2026-08-25","delivery":"Chandapura, Anekal Taluk","customer":"Strides Pharma Science Ltd -F4","job_type":"Repeat Job","product_code":"1050730","product_name":"1050730 - PCT-APX-DOXY 50MG-1X25 S-ARROTEX,AUS-R1","ordered_qty":48000.0,"pending_qty":48000.0,"pending_value":96960.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1356","wo_date":"2026-08-25","delivery":"Chandapura, Anekal Taluk","customer":"Strides Pharma Science Ltd -F4","job_type":"Repeat Job","product_code":"1050204","product_name":"1050204 - PCT-VALACICLOVIR-500MG-3X10S-WAGNER","ordered_qty":130000.0,"pending_qty":130000.0,"pending_value":205400.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1359","wo_date":"2026-08-25","delivery":"JADCHERLA","customer":"HETERO LABS LIMITED [ UNIT V ]","job_type":"Repeat Job","product_code":"2077975","product_name":"2077975 - PRINTED BLISTER CARTON FOR PANTROX 40 (PANTOPRAZOLE 40MG TABLETS) 6X10S SAUDI AMAROX SAUDI ARABIA","ordered_qty":22000.0,"pending_qty":22000.0,"pending_value":58300.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null},{"wo_no":"BN-2627/1360","wo_date":"2026-08-25","delivery":"Dabaspet","customer":"SHILPA MEDICARE LIMITED","job_type":"New Job","product_code":"4200353","product_name":"4200353 - PLAIN CARTON 87 X 70 X 32 MM (LXWXH) TUCKIN FLAPS","ordered_qty":6300.0,"pending_qty":6300.0,"pending_value":18774.0,"status":"PLANNING","aging":1.0,"mrn_date":null,"grn_date":null,"printing_date":null,"fg_date":null,"remarks":null,"remarks_date":null}]</script>
+<script>
+(function(){
+  const DATA_EL = document.getElementById('orders-data');
+  const DEFAULT_DATA_JSON = DATA_EL.textContent; // snapshot before any import can overwrite it
+  const STORAGE_KEY = 'pendingOrdersDashboard:v1';
+
+  let RAW, sourceLabel;
+  (function loadInitialData(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if(saved && Array.isArray(saved.records) && saved.records.length){
+        RAW = saved.records;
+        sourceLabel = (saved.sourceLabel || 'Imported data') + ' — restored from last session';
+        return;
+      }
+    }catch(e){ /* localStorage unavailable or corrupted — fall through to default */ }
+    RAW = JSON.parse(DEFAULT_DATA_JSON);
+    sourceLabel = 'Pharma_pending_orders.xlsx (current, updated ' + new Date().toLocaleDateString('en-IN') + ')';
+  })();
+
+  function persistData(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({records: RAW, sourceLabel}));
+    }catch(e){ /* storage full or unavailable — non-fatal, just won't persist */ }
+  }
+
+  function hasSavedData(){
+    try{ return !!localStorage.getItem(STORAGE_KEY); }catch(e){ return false; }
+  }
+
+  document.getElementById('reset-data-btn').addEventListener('click', function(){
+    if(!confirm('Clear the imported data and go back to the sample file? This only affects what\'s stored in this browser.')) return;
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    RAW = JSON.parse(DEFAULT_DATA_JSON);
+    sourceLabel = 'Pharma_pending_orders.xlsx (current, updated ' + new Date().toLocaleDateString('en-IN') + ')';
+    activeStageFilter = null;
+    renderDashboard();
+  });
+
+  const fmtInt = n => Math.round(n).toLocaleString('en-IN');
+  const fmtINR = n => '₹' + Math.round(n).toLocaleString('en-IN');
+  const fmtDate = s => {
+    if(!s) return '—';
+    const d = new Date(s);
+    if(isNaN(d)) return '—';
+    return d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric', timeZone:'UTC'});
+  };
+
+  function statusChipClass(status){
+    const s = (status||'').toUpperCase();
+    if(s === 'FG') return 'chip-fg';
+    if(['PLANNING','PLANNED','SC PLANNED'].includes(s)) return 'chip-plan';
+    if(['RM PENDING','SHORTAGE','SC /RM'].includes(s)) return 'chip-crit';
+    if(['CUTTING/FOLDING','CUTTING','PUNCHING','PRINTING','OUTSOURCE','CS END PENDING'].includes(s)) return 'chip-warn';
+    return 'chip-other';
+  }
+  function agingColor(a){
+    if(a==null) return '#c9cfd4';
+    if(a<=15) return '#3F7A4E';
+    if(a<=30) return '#0E7C86';
+    if(a<=60) return '#C77F1D';
+    if(a<=90) return '#c65f2a';
+    return '#B23A34';
+  }
+  function agingBg(a){
+    if(a==null) return '#EDEDED';
+    if(a<=15) return '#E4F0E6';
+    if(a<=30) return '#E1EFF0';
+    if(a<=60) return '#FBEBD6';
+    if(a<=90) return '#f7e3d5';
+    return '#F6DEDC';
+  }
+
+  // ============ sort/filter state for the table ============
+  let sortKey = 'aging';
+  let sortDir = -1;
+  let activeStageFilter = null; // {label, woSet}
+
+  // ============ MAIN RENDER ============
+  function renderDashboard(){
+    document.getElementById('updated-line').textContent =
+      'Snapshot as on ' + new Date().toLocaleDateString('en-IN', {day:'2-digit', month:'long', year:'numeric'}) +
+      ' · ' + RAW.length + ' open work orders';
+    document.getElementById('data-source-line').textContent = 'Data source: ' + sourceLabel;
+    document.getElementById('reset-data-btn').style.display = hasSavedData() ? 'inline' : 'none';
+
+    // ---- KPIs ----
+    const totalOrders = RAW.length;
+    const totalQty = RAW.reduce((s,r)=>s+(r.pending_qty||0),0);
+    const totalValue = RAW.reduce((s,r)=>s+(r.pending_value||0),0);
+    const agings = RAW.map(r=>agingOf(r)).filter(a=>a!=null);
+    const avgAging = agings.length ? agings.reduce((a,b)=>a+b,0)/agings.length : 0;
+    const maxAging = agings.length ? Math.max(...agings) : 0;
+
+    document.getElementById('kpi-orders').textContent = totalOrders;
+    document.getElementById('kpi-orders-sub').textContent = new Set(RAW.map(r=>r.customer)).size + ' customers';
+    document.getElementById('kpi-qty').textContent = fmtInt(totalQty);
+    document.getElementById('kpi-value').textContent = fmtINR(totalValue);
+    document.getElementById('kpi-aging').textContent = Math.round(avgAging) + ' / ' + Math.round(maxAging);
+    document.getElementById('kpi-aging-sub').textContent = 'avg / oldest, days pending';
+
+    // ---- Status breakdown ----
+    const statusColor = s => {
+      const cls = statusChipClass(s);
+      return {'chip-fg':'#3F7A4E','chip-plan':'#1F3A5F','chip-warn':'#C77F1D','chip-crit':'#B23A34','chip-other':'#8b98a5'}[cls];
+    };
+    const statusCounts = {}, statusValues = {};
+    RAW.forEach(r => {
+      statusCounts[r.status] = (statusCounts[r.status]||0) + 1;
+      statusValues[r.status] = (statusValues[r.status]||0) + (r.pending_value||0);
+    });
+    const statusEntries = Object.entries(statusCounts).sort((a,b)=>b[1]-a[1]);
+    const maxStatusCount = Math.max(...statusEntries.map(e=>e[1]), 1);
+    const statusBarsEl = document.getElementById('status-bars');
+    statusBarsEl.innerHTML = statusEntries.map(([status, count]) => `
+      <div class="bar-row">
+        <div class="name">${status}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(count/maxStatusCount*100).toFixed(1)}%;background:${statusColor(status)};"></div></div>
+        <div class="count">${count}</div>
+        <div class="rowval">${fmtCompactINR(statusValues[status])}</div>
+      </div>`).join('');
+
+    // ---- Job type split ----
+    const jobCounts = {};
+    RAW.forEach(r => { jobCounts[r.job_type] = (jobCounts[r.job_type]||0) + 1; });
+    document.getElementById('job-split').innerHTML = Object.entries(jobCounts).sort((a,b)=>b[1]-a[1]).map(([jt,count])=>
+      `<div class="split-block"><div class="n">${count}</div><div class="t">${jt}</div></div>`).join('');
+
+    // ---- Aging buckets, with category composition per bucket ----
+    const CATEGORY_DEFS = [
+      {key:'CS',        label:'CS',        color:'#C77F1D', match:s => s.includes('CS') || s.startsWith('SC')},
+      {key:'RM',        label:'RM',        color:'#B23A34', match:s => s.includes('RM')},
+      {key:'FG',        label:'FG',        color:'#3F7A4E', match:s => s === 'FG'},
+      {key:'WIP',       label:'WIP',       color:'#1F3A5F', match:s => ['PRINTING','PLANNED','PLANNING','PUNCHING'].includes(s)},
+      {key:'SHORTAGE',  label:'Shortage',  color:'#8a3fa0', match:s => s === 'SHORTAGE'},
+      {key:'OUTSOURCE', label:'Outsource', color:'#0E7C86', match:s => s === 'OUTSOURCE'},
+      {key:'OTHER',     label:'Other',     color:'#8b98a5', match:s => true},
+    ];
+    function categoryOf(status){
+      const s = (status||'').toUpperCase();
+      for(const c of CATEGORY_DEFS){ if(c.match(s)) return c; }
+      return CATEGORY_DEFS[CATEGORY_DEFS.length-1];
+    }
+
+    const buckets = [
+      {label:'0–7d', min:0, max:7},
+      {label:'8–14d', min:8, max:14},
+      {label:'15–30d', min:15, max:30},
+      {label:'30+d', min:31, max:Infinity},
+    ];
+    const bucketRows = buckets.map(b => RAW.filter(r => { const a = agingOf(r); return a!=null && a>=b.min && a<=b.max; }));
+    const bucketCounts = bucketRows.map(rows => rows.length);
+    const maxBucket = Math.max(...bucketCounts, 1);
+
+    document.getElementById('aging-buckets').innerHTML = buckets.map((b,i)=>{
+      const rows = bucketRows[i];
+      const total = bucketCounts[i];
+      const totalH = Math.max((total/maxBucket*90), total>0?6:2);
+      // tally by category, preserving CATEGORY_DEFS order for stacking
+      const tally = {};
+      CATEGORY_DEFS.forEach(c => tally[c.key] = 0);
+      rows.forEach(r => tally[categoryOf(r.status).key]++);
+      const segments = CATEGORY_DEFS
+        .filter(c => tally[c.key] > 0)
+        .map(c => {
+          const segH = total>0 ? (tally[c.key]/total*totalH) : 0;
+          return `<div class="seg" title="${c.label}: ${tally[c.key]}" style="height:${segH}px;background:${c.color};"></div>`;
+        }).join('');
+      const breakdown = CATEGORY_DEFS
+        .filter(c => tally[c.key] > 0)
+        .map(c => `<div class="cat-line" style="color:${c.color};">${c.label} ${tally[c.key]}</div>`)
+        .join('');
+      return `<div class="col">
+        <div class="bar-area"><div class="cnt">${total}</div><div class="stack-bar" style="height:${totalH}px;">${segments}</div></div>
+        <div class="lab">${b.label}</div>
+        <div class="cat-breakdown">${breakdown}</div>
+      </div>`;
+    }).join('');
+
+
+    // ---- Customers: aging report ----
+    const AGE_BUCKETS = [
+      {key:'b0_7',  min:0,  max:7,        color:'#3F7A4E', bg:'#E4F0E6'},
+      {key:'b8_14', min:8,  max:14,       color:'#0E7C86', bg:'#E1EFF0'},
+      {key:'b14_30',min:15, max:30,       color:'#C77F1D', bg:'#FBEBD6'},
+      {key:'b30p',  min:31, max:Infinity, color:'#B23A34', bg:'#F6DEDC'},
+    ];
+    const custOrders = {}, custBuckets = {};
+    RAW.forEach(r => {
+      custOrders[r.customer] = (custOrders[r.customer]||0) + 1;
+      const cb = custBuckets[r.customer] = custBuckets[r.customer] || {b0_7:0,b8_14:0,b14_30:0,b30p:0};
+      const a = agingOf(r);
+      if(a != null){
+        const bucket = AGE_BUCKETS.find(b => a >= b.min && a <= b.max);
+        if(bucket) cb[bucket.key]++;
+      }
+    });
+    const custEntries = Object.keys(custOrders).sort((a,b)=>{
+      const diff = custBuckets[b].b30p - custBuckets[a].b30p;
+      return diff !== 0 ? diff : custOrders[b] - custOrders[a];
+    });
+    document.getElementById('customer-bars').innerHTML = custEntries.map(cust=>{
+      const cb = custBuckets[cust];
+      const cells = AGE_BUCKETS.map(b => {
+        const n = cb[b.key];
+        const style = n>0 ? `color:${b.color};background:${b.bg};` : '';
+        const cls = n>0 ? 'age-count-pill' : 'age-count-pill age-count-zero';
+        return `<td class="age-count-cell"><span class="${cls}" style="${style}">${n}</span></td>`;
+      }).join('');
+      return `
+        <tr>
+          <td><span class="cust-name" title="${cust}">${cust}</span></td>
+          <td style="text-align:right;font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);">${custOrders[cust]}</td>
+          ${cells}
+        </tr>`;
+    }).join('');
+
+    // ---- Filters (rebuild options, try to keep current selection if still valid) ----
+    const statusFilter = document.getElementById('status-filter');
+    const customerFilter = document.getElementById('customer-filter');
+    const prevStatus = statusFilter.value, prevCustomer = customerFilter.value;
+    statusFilter.innerHTML = '<option value="">All statuses</option>' +
+      [...new Set(RAW.map(r=>r.status))].sort().map(s=>`<option value="${s}">${s}</option>`).join('');
+    customerFilter.innerHTML = '<option value="">All customers</option>' +
+      [...new Set(RAW.map(r=>r.customer))].sort().map(c=>`<option value="${c}">${c}</option>`).join('');
+    if([...statusFilter.options].some(o=>o.value===prevStatus)) statusFilter.value = prevStatus;
+    if([...customerFilter.options].some(o=>o.value===prevCustomer)) customerFilter.value = prevCustomer;
+
+    renderStageBoard();
+    renderTable();
+  }
+
+  // ============ STAGE SCOREBOARD ============
+  const STAGE_GROUPS = [
+    {key:'total',    label:'Pending Orders', match:null, threshold:null, dateField:null},
+    {key:'cs_end',   label:'CS END pending', match:r=>r.status==='CS END PENDING', threshold:null, dateField:null},
+    {key:'planning', label:'Planning/design', match:r=>r.status==='PLANNING', threshold:1, dateField:null},
+    {key:'mrn_grn',  label:'MRN – GRN', match:r=>r.status.includes('RM'), threshold:3, dateField:'mrn_date'},
+    {key:'grn_ptg',  label:'GRN – PTG', match:r=>r.status==='PRINTING'||r.status==='PLANNED', threshold:2, dateField:'grn_date'},
+    {key:'ptg_fg',   label:'PTG – FG', match:r=>['CUTTING/FOLDING','CUTTING','PUNCHING','OUTSOURCE'].includes(r.status), threshold:3, dateField:'printing_date'},
+    {key:'fg',       label:'FG', match:r=>r.status==='FG', threshold:null, dateField:null},
+    {key:'shortage', label:'Shortage', match:r=>r.status==='SHORTAGE', threshold:null, dateField:null},
+  ];
+
+  function fmtCompactINR(n){
+    if(n==null) return '—';
+    const abs = Math.abs(n);
+    if(abs >= 1e7) return '₹' + (n/1e7).toFixed(2) + 'Cr';
+    if(abs >= 1e5) return '₹' + (n/1e5).toFixed(1) + 'L';
+    if(abs >= 1e3) return '₹' + (n/1e3).toFixed(1) + 'k';
+    return '₹' + Math.round(n).toLocaleString('en-IN');
+  }
+
+  function daysSince(iso){
+    if(!iso) return null;
+    const parts = iso.split('-');
+    if(parts.length !== 3) return null;
+    const ms = toUTCms(+parts[0], +parts[1]-1, +parts[2]);
+    return Math.round((todayUTCms() - ms) / 86400000);
+  }
+
+  // Aging must always reflect "days since the relevant date, as of right now" —
+  // never a number frozen at import time. Recompute it live every render.
+  // Priority: a customer-delay date noted in Remarks (if present) overrides the
+  // WO Date entirely, since that reflects the real reason the order is stuck;
+  // otherwise fall back to WO Date, then finally to a stored/sheet aging value
+  // if no usable date exists at all.
+  function agingOf(r){
+    if(r.remarks_date != null){
+      const a = daysSince(r.remarks_date);
+      if(a != null) return a;
+    }
+    if(r.wo_date != null){
+      const a = daysSince(r.wo_date);
+      if(a != null) return a;
+    }
+    return r.aging;
+  }
+
+  function computeStageCell(matchFn, filterFn){
+    let count = 0, val = 0;
+    const rows = [];
+    RAW.forEach(r=>{
+      if(matchFn && !matchFn(r)) return;
+      if(filterFn && !filterFn(r)) return;
+      count++; val += r.pending_value || 0; rows.push(r);
+    });
+    return {count, val, rows};
+  }
+
+  let stageCellRegistry = [];
+
+  function renderStageBoard(){
+    stageCellRegistry = [];
+    const noDateNotes = [];
+    const cells = STAGE_GROUPS.map(g=>{
+      if(g.threshold == null){
+        const cell = computeStageCell(g.match, null);
+        const idx = stageCellRegistry.push({label:g.label, rows:cell.rows}) - 1;
+        return {label:g.label, span:1, cols:[Object.assign({}, cell, {idx})]};
+      }
+      const ageOf = r => g.dateField ? daysSince(r[g.dateField]) : agingOf(r);
+      const lte = computeStageCell(g.match, r => { const a = ageOf(r); return a!=null && a <= g.threshold; });
+      const gt = computeStageCell(g.match, r => { const a = ageOf(r); return a!=null && a > g.threshold; });
+      const idxLte = stageCellRegistry.push({label:g.label + ' ≤' + g.threshold + 'd', rows:lte.rows}) - 1;
+      const idxGt = stageCellRegistry.push({label:g.label + ' >' + g.threshold + 'd', rows:gt.rows}) - 1;
+      const groupTotal = computeStageCell(g.match, null).count;
+      const noDate = groupTotal - lte.count - gt.count;
+      if(noDate > 0) noDateNotes.push(g.label + ' (' + noDate + ')');
+      return {label:g.label, span:2, cols:[Object.assign({},lte,{idx:idxLte}), Object.assign({},gt,{idx:idxGt})], sub:['≤'+g.threshold, '>'+g.threshold]};
+    });
+
+    const grpRow = '<tr class="grp"><th rowspan="2" style="text-align:left;">Stage</th>' +
+      cells.map(c => `<th colspan="${c.span}">${c.label}</th>`).join('') + '</tr>';
+    const subRow = '<tr class="sub">' +
+      cells.map(c => c.span===2 ? `<th>${c.sub[0]}</th><th>${c.sub[1]}</th>` : '<th>—</th>').join('') + '</tr>';
+    const jobsRow = '<tr><th>Jobs</th>' +
+      cells.map(c => c.cols.map(x=>`<td class="jobs-cell${x.count>0?' clickable':''}" data-cell-idx="${x.idx}">${x.count}</td>`).join('')).join('') + '</tr>';
+    const valueRow = '<tr><th>Value</th>' +
+      cells.map(c => c.cols.map(x=>`<td class="value-cell-stage">${fmtCompactINR(x.val)}</td>`).join('')).join('') + '</tr>';
+
+    document.getElementById('stage-board').innerHTML =
+      '<thead>' + grpRow + subRow + '</thead><tbody>' + jobsRow + valueRow + '</tbody>';
+
+    const noteEl = document.getElementById('stage-board-note');
+    if(noDateNotes.length){
+      noteEl.style.display = 'block';
+      noteEl.textContent = 'Not yet split by day (no stage date recorded in the sheet): ' + noDateNotes.join(', ') + '.';
+    } else {
+      noteEl.style.display = 'none';
+    }
+  }
+
+  document.getElementById('stage-board').addEventListener('click', function(e){
+    const cell = e.target.closest('.jobs-cell.clickable');
+    if(!cell) return;
+    const entry = stageCellRegistry[+cell.dataset.cellIdx];
+    if(!entry || !entry.rows.length) return;
+    document.getElementById('search').value = '';
+    document.getElementById('status-filter').value = '';
+    document.getElementById('customer-filter').value = '';
+    activeStageFilter = {label: entry.label, woSet: new Set(entry.rows.map(r=>r.wo_no))};
+    renderTable();
+    document.querySelector('.table-panel').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+
+  // ============ TABLE ============
+  function renderTable(){
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const sf = document.getElementById('status-filter').value;
+    const cf = document.getElementById('customer-filter').value;
+
+    let rows = RAW.filter(r=>{
+      if(activeStageFilter && !activeStageFilter.woSet.has(r.wo_no)) return false;
+      if(sf && r.status !== sf) return false;
+      if(cf && r.customer !== cf) return false;
+      if(q){
+        const hay = (r.wo_no+' '+r.customer+' '+r.product_name+' '+(r.product_code||'')).toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    rows.sort((a,b)=>{
+      let av = sortKey === 'aging' ? agingOf(a) : a[sortKey];
+      let bv = sortKey === 'aging' ? agingOf(b) : b[sortKey];
+      if(av==null) av = sortDir===1 ? Infinity : -Infinity;
+      if(bv==null) bv = sortDir===1 ? Infinity : -Infinity;
+      if(typeof av === 'string') return av.localeCompare(bv) * sortDir;
+      return (av-bv) * sortDir;
+    });
+
+    document.getElementById('row-count').textContent = rows.length + ' of ' + RAW.length + ' orders';
+
+    const badgeEl = document.getElementById('stage-filter-badge');
+    if(activeStageFilter){
+      badgeEl.style.display = 'flex';
+      badgeEl.innerHTML = 'Filtered by stage: <strong>' + activeStageFilter.label + '</strong> (' +
+        activeStageFilter.woSet.size + ' jobs) <button id="clear-stage-filter" class="clear-filter-btn">Clear ×</button>';
+    } else {
+      badgeEl.style.display = 'none';
+      badgeEl.innerHTML = '';
+    }
+
+    document.getElementById('table-body').innerHTML = rows.map(r => {
+      const rowAging = agingOf(r);
+      const fromRemarks = r.remarks_date != null;
+      const agingTitle = fromRemarks
+        ? 'Aging from Remarks date (' + fmtDate(r.remarks_date) + ') — click for stage breakdown'
+        : 'Click for stage breakdown';
+      return `
+      <tr>
+        <td class="mono">${r.wo_no}</td>
+        <td class="mono">${fmtDate(r.wo_date)}</td>
+        <td>${r.customer}<span class="product-name">${r.product_name}</span></td>
+        <td>${r.job_type}</td>
+        <td><span class="chip ${statusChipClass(r.status)}">${r.status}</span></td>
+        <td class="num">${r.pending_qty!=null ? fmtInt(r.pending_qty) : '—'}</td>
+        <td class="num">${r.pending_value!=null ? fmtINR(r.pending_value) : '—'}</td>
+        <td>
+          <div class="aging-cell" data-wo="${r.wo_no}" title="${agingTitle}">
+            <div class="aging-strip"><i style="width:${rowAging!=null?Math.min(rowAging/125*100,100):0}%;background:${agingColor(rowAging)};"></i></div>
+            <span class="aging-num">${rowAging!=null?Math.round(rowAging):'—'}</span>${fromRemarks ? '<span class="remarks-flag">R</span>' : ''}
+          </div>
+        </td>
+      </tr>`; }).join('');
+  }
+
+  document.getElementById('table-body').addEventListener('click', function(e){
+    const cell = e.target.closest('.aging-cell');
+    if(!cell) return;
+    openStageModal(cell.dataset.wo);
+  });
+
+  // ============ PER-ORDER STAGE BREAKDOWN MODAL ============
+  const STAGE_DEFS = [
+    {label:'Planning / Design', target:1, startField:'wo_date', endField:'mrn_date'},
+    {label:'MRN → GRN', target:3, startField:'mrn_date', endField:'grn_date'},
+    {label:'GRN → Print', target:2, startField:'grn_date', endField:'printing_date'},
+    {label:'Print → FG', target:3, startField:'printing_date', endField:'fg_date'},
+  ];
+
+  function daysBetween(startIso, endIso){
+    if(!startIso || !endIso) return null;
+    const [sy,sm,sd] = startIso.split('-').map(Number);
+    const [ey,em,ed] = endIso.split('-').map(Number);
+    return Math.round((toUTCms(ey,em-1,ed) - toUTCms(sy,sm-1,sd)) / 86400000);
+  }
+
+  function computeOrderStages(r){
+    return STAGE_DEFS.map(s=>{
+      const start = r[s.startField];
+      const end = r[s.endField];
+      if(!start){
+        return Object.assign({}, s, {state:'not-reached', start:null, end:null, duration:null});
+      }
+      const duration = end ? daysBetween(start, end) : daysSince(start);
+      const state = end ? 'done' : 'ongoing';
+      const overTarget = duration != null && duration > s.target;
+      return Object.assign({}, s, {start, end, duration, state, overTarget});
+    });
+  }
+
+  function openStageModal(woNo){
+    const r = RAW.find(x => x.wo_no === woNo);
+    if(!r) return;
+    document.getElementById('stage-modal-title').textContent = 'Stage breakdown — ' + r.wo_no;
+    const modalAging = agingOf(r);
+    const agingSourceNote = r.remarks_date != null
+      ? ' (from Remarks date ' + fmtDate(r.remarks_date) + ')'
+      : '';
+    document.getElementById('stage-modal-sub').textContent = r.customer + ' · ' + r.product_name +
+      ' · Overall aging: ' + (modalAging!=null ? Math.round(modalAging)+'d' : '—') + agingSourceNote;
+
+    const stages = computeOrderStages(r);
+    document.getElementById('stage-modal-body').innerHTML = stages.map(s=>{
+      let stateLabel, stateColor, stateBg, barColor;
+      if(s.state === 'not-reached'){
+        stateLabel = 'Not yet reached'; stateColor = '#8b98a5'; stateBg = '#EDEDED'; barColor = '#D7DCE1';
+      } else {
+        const over = s.overTarget;
+        stateLabel = (s.state === 'ongoing' ? 'In progress · ' : '') + (over ? 'Delayed' : 'On track');
+        stateColor = over ? '#B23A34' : '#3F7A4E';
+        stateBg = over ? '#F6DEDC' : '#E4F0E6';
+        barColor = over ? '#B23A34' : '#3F7A4E';
+      }
+      const durationLabel = s.duration != null ? s.duration + 'd' : '—';
+      const pct = s.duration != null ? Math.min((s.duration / s.target) * 100, 140) : 0;
+      const endLabel = s.end ? fmtDate(s.end) : (s.start ? 'in progress' : '—');
+      return `
+        <div class="stage-block">
+          <div class="stage-block-top">
+            <span class="stage-name">${s.label}</span>
+            <span class="stage-target">Target: ${s.target}d</span>
+          </div>
+          <div class="stage-bar-track"><div class="stage-bar-fill" style="width:${pct}%;background:${barColor};"></div></div>
+          <div class="stage-block-bottom">
+            <span class="stage-state-pill" style="color:${stateColor};background:${stateBg};">${stateLabel}</span>
+            <span class="stage-duration">${durationLabel}</span>
+          </div>
+          <div class="stage-dates">${s.start ? fmtDate(s.start) : '—'} → ${endLabel}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('stage-modal-overlay').classList.add('open');
+  }
+
+  function closeStageModal(){
+    document.getElementById('stage-modal-overlay').classList.remove('open');
+  }
+  document.getElementById('stage-modal-close').addEventListener('click', closeStageModal);
+  document.getElementById('stage-modal-overlay').addEventListener('click', function(e){
+    if(e.target === this) closeStageModal();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeStageModal();
+  });
+
+  document.querySelectorAll('thead th[data-key]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(sortKey === key){ sortDir *= -1; } else { sortKey = key; sortDir = 1; }
+      document.querySelectorAll('thead th .arrow').forEach(a=>a.textContent='');
+      th.querySelector('.arrow').textContent = sortDir===1 ? '▲' : '▼';
+      renderTable();
+    });
+  });
+  document.getElementById('search').addEventListener('input', renderTable);
+  document.getElementById('status-filter').addEventListener('change', renderTable);
+  document.getElementById('customer-filter').addEventListener('change', renderTable);
+  document.getElementById('stage-filter-badge').addEventListener('click', function(e){
+    if(e.target.id === 'clear-stage-filter'){
+      activeStageFilter = null;
+      renderTable();
+    }
+  });
+
+  // ============ EXCEL IMPORT ============
+  function normHeader(h){ return String(h==null?'':h).toLowerCase().replace(/[^a-z0-9]/g,''); }
+
+  // Some workbooks declare a bogus '!ref' covering the entire sheet (e.g. A1:XFD1048576)
+  // even though real data only fills a small corner — usually from formatting applied to
+  // whole rows/columns. Trusting that declared range when building a dense array blows up
+  // browser memory. Instead, scan the sheet's actual populated cells to find the real extent.
+  function getUsedRange(ws){
+    let maxR = -1, maxC = -1, cellCount = 0;
+    for(const key in ws){
+      if(key.charCodeAt(0) === 33) continue; // skip '!ref', '!merges', etc.
+      const cell = ws[key];
+      if(!cell || cell.v === undefined || cell.v === null || cell.v === '') continue;
+      cellCount++;
+      const addr = XLSX.utils.decode_cell(key);
+      if(addr.r > maxR) maxR = addr.r;
+      if(addr.c > maxC) maxC = addr.c;
+    }
+    if(maxR === -1){
+      return {s:{r:0,c:0}, e:{r:0,c:0}};
+    }
+    // hard safety cap even on genuine large sheets, generous enough for real-world use
+    maxR = Math.min(maxR, 50000);
+    maxC = Math.min(maxC, 300);
+    return {s:{r:0,c:0}, e:{r:maxR, c:maxC}};
+  }
+
+  // Two-pass matching: exact normalized match wins first, across all columns;
+  // any fields still unmatched fall back to a looser "contains these fragments" test.
+  const FIELD_RULES = {
+    pending_value: { exact:['pendingvalue'], any:[h=>h.includes('pending') && h.includes('value')] },
+    pending_qty:   { exact:['pendingqty'],   any:[h=>h.includes('pending') && (h.includes('qty')||h.includes('quantity'))] },
+    ordered_qty:   { exact:['orderedqty'],   any:[h=>h.includes('order') && (h.includes('qty')||h.includes('quantity'))] },
+    wo_no:         { exact:['wono','workorderno','workordernumber'], any:[h=>h.includes('wo') && h.includes('no') && !h.includes('date')] },
+    wo_date:       { exact:['wodate'],       any:[h=>h.includes('wo') && h.includes('date')] },
+    delivery:      { exact:['delivery'],     any:[h=>h.includes('delivery')] },
+    customer:      { exact:['customer','customername','client','clientname'], any:[h=>h.includes('customer') && !h.includes('requirement') && !h.includes('date')] },
+    job_type:      { exact:['typeofjobs','typeofjob','jobtype'], any:[h=>h.includes('job') && h.includes('type')] },
+    product_code:  { exact:['productcode','itemcode','skucode'], any:[h=>(h.includes('product')||h.includes('item')) && h.includes('code')] },
+    product_name:  { exact:['productname','itemname','itemdescription','description'], any:[h=>(h.includes('product')||h.includes('item')) && h.includes('name')] },
+    status:        { exact:['status'],       any:[h=>h.includes('status')||h.includes('stage')] },
+    aging:         { exact:['aging','ageing'], any:[h=>h.startsWith('aging')||h.startsWith('ageing')||h.includes('dayspending')] },
+    mrn_date:      { exact:['mrn'],          any:[h=>h==='mrn'] },
+    grn_date:      { exact:['rm','grn'],     any:[h=>h==='rm'||h==='grn'] },
+    printing_date: { exact:['printing'],     any:[h=>h==='printing'||h.includes('ptg')] },
+    fg_date:       { exact:['fgdates','fgdate'], any:[h=>h.startsWith('fg') && h.includes('date')] },
+    remarks:       { exact:['remarks','remark'], any:[h=>h.includes('remark')] },
+  };
+
+  function buildColMap(headerRow){
+    const norms = headerRow.map(normHeader);
+    const colMap = {};
+    const used = new Set();
+    // pass 1: exact matches, highest priority, checked across all columns first
+    Object.keys(FIELD_RULES).forEach(field=>{
+      for(let i=0;i<norms.length;i++){
+        if(used.has(i) || !norms[i]) continue;
+        if(FIELD_RULES[field].exact.includes(norms[i])){ colMap[field]=i; used.add(i); break; }
+      }
+    });
+    // pass 2: fuzzy matches fill any remaining gaps
+    Object.keys(FIELD_RULES).forEach(field=>{
+      if(colMap.hasOwnProperty(field)) return;
+      for(let i=0;i<norms.length;i++){
+        if(used.has(i) || !norms[i]) continue;
+        if(FIELD_RULES[field].any.some(fn=>fn(norms[i]))){ colMap[field]=i; used.add(i); break; }
+      }
+    });
+    return colMap;
+  }
+
+  function showImportNotice(msg, isWarning){
+    const el = document.getElementById('import-notice');
+    if(!msg){ el.style.display='none'; return; }
+    el.textContent = msg;
+    el.className = 'import-notice' + (isWarning ? ' import-notice-warn' : '');
+    el.style.display = 'block';
+  }
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function toUTCms(y,m,d){ return Date.UTC(y,m,d); }
+  function todayUTCms(){ const t=new Date(); return toUTCms(t.getFullYear(), t.getMonth(), t.getDate()); }
+
+  function excelSerialToUTCms(serial){
+    // Excel's day 0 is 1899-12-30 in the 1900 date system (SheetJS/Excel convention).
+    // 25569 = the Excel serial number for 1970-01-01 (JS epoch), used to re-base.
+    const utcDays = Math.round(serial) - 25569;
+    return utcDays * 86400000;
+  }
+
+  const MONTH_NAMES = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+
+  function parseDateCell(v){
+    if(v==null || v==='') return null;
+    let ms = null;
+
+    if(v instanceof Date && !isNaN(v)){
+      ms = toUTCms(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
+    } else if(typeof v === 'number'){
+      ms = excelSerialToUTCms(v);
+    } else if(typeof v === 'string'){
+      const s = v.trim();
+      let m;
+      if((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))){ // ISO: YYYY-MM-DD
+        ms = toUTCms(+m[1], +m[2]-1, +m[3]);
+      } else if((m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/))){ // DD-MM-YYYY or DD/MM/YYYY
+        ms = toUTCms(+m[3], +m[2]-1, +m[1]);
+      } else if((m = s.match(/^(\d{1,2})[\-\/\s]([A-Za-z]{3,})[\-\/\s](\d{2,4})$/))){ // DD-Mon-YYYY
+        const mon = MONTH_NAMES[m[2].slice(0,3).toLowerCase()];
+        if(mon != null){
+          let yr = +m[3]; if(yr < 100) yr += 2000;
+          ms = toUTCms(yr, mon, +m[1]);
+        }
+      } else {
+        const parsed = new Date(s);
+        if(!isNaN(parsed)) ms = toUTCms(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+      }
+    }
+
+    if(ms == null) return null;
+    const dt = new Date(ms);
+    const y = dt.getUTCFullYear();
+    if(y < 2000 || y > 2100) return null;
+    return {iso: y+'-'+pad(dt.getUTCMonth()+1)+'-'+pad(dt.getUTCDate()), ms};
+  }
+
+  // Scans free text (e.g. a Remarks cell) for the first date-like substring —
+  // used to pick up customer-side delay dates buried in notes, not just structured date cells.
+  function extractDateFromText(text){
+    if(!text) return null;
+    const s = String(text);
+    let m, ms = null;
+
+    if((m = s.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/))){ // YYYY-MM-DD anywhere in the text
+      ms = toUTCms(+m[1], +m[2]-1, +m[3]);
+    } else if((m = s.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\b/))){ // DD-MM-YYYY / DD/MM/YYYY / DD.MM.YYYY
+      ms = toUTCms(+m[3], +m[2]-1, +m[1]);
+    } else if((m = s.match(/\b(\d{1,2})[\-\/.\s]+([A-Za-z]{3,9})[\-\/.\s,]+(\d{2,4})\b/))){ // DD-Mon-YYYY / DD Mon YYYY
+      const mon = MONTH_NAMES[m[2].slice(0,3).toLowerCase()];
+      if(mon != null){
+        let yr = +m[3]; if(yr < 100) yr += 2000;
+        ms = toUTCms(yr, mon, +m[1]);
+      }
+    } else if((m = s.match(/\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{2,4})\b/))){ // Mon DD, YYYY / Mon DD YYYY
+      const mon = MONTH_NAMES[m[1].slice(0,3).toLowerCase()];
+      if(mon != null){
+        let yr = +m[3]; if(yr < 100) yr += 2000;
+        ms = toUTCms(yr, mon, +m[2]);
+      }
+    }
+
+    if(ms == null) return null;
+    const dt = new Date(ms);
+    const y = dt.getUTCFullYear();
+    if(y < 2000 || y > 2100) return null; // sanity-check: reject accidental number matches (e.g. "PO No 2026112")
+    return y+'-'+pad(dt.getUTCMonth()+1)+'-'+pad(dt.getUTCDate());
+  }
+
+  function parseNumCell(v){
+    if(v==null || v==='') return null;
+    if(typeof v === 'number') return isNaN(v) ? null : v;
+    const cleaned = String(v).replace(/,/g,'').trim();
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? null : n;
+  }
+
+  function cleanStrCell(v, dflt){
+    if(v==null) return dflt===undefined ? null : dflt;
+    const s = String(v).trim();
+    return s ? s : (dflt===undefined ? null : dflt);
+  }
+
+  function getUsedRange(ws){
+    // Some workbooks report a bogus full-grid dimension (e.g. up to column XFD /
+    // row ~1,048,576) even when actual data occupies a tiny corner. Trusting that
+    // via the default range blows up memory. Compute the real bounding box instead
+    // by scanning the sheet's own cell keys (ignoring "!"-prefixed metadata keys).
+    let maxRow = 0, maxCol = 0, found = false;
+    for(const addr in ws){
+      if(addr.charCodeAt(0) === 33) continue; // '!' metadata keys like !ref, !merges
+      let dec;
+      try{ dec = XLSX.utils.decode_cell(addr); } catch(e){ continue; }
+      if(dec.r > maxRow) maxRow = dec.r;
+      if(dec.c > maxCol) maxCol = dec.c;
+      found = true;
+    }
+    if(!found) return null;
+    // hard safety cap in case a genuinely huge sheet is uploaded
+    const CAP_ROWS = 50000, CAP_COLS = 500;
+    return {
+      s:{r:0, c:0},
+      e:{r:Math.min(maxRow, CAP_ROWS), c:Math.min(maxCol, CAP_COLS)},
+      truncated: maxRow > CAP_ROWS || maxCol > CAP_COLS
+    };
+  }
+
+  function parseWorkbookToRecords(wb){
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const usedRange = getUsedRange(ws);
+    const rows = XLSX.utils.sheet_to_json(ws, {
+      header:1, raw:true, defval:null,
+      range: usedRange ? usedRange : undefined
+    });
+
+    // find header row: first row (within first 15) containing a cell that normalizes to include "wono"
+    let headerRowIdx = -1;
+    for(let i=0;i<Math.min(rows.length,15);i++){
+      const row = rows[i] || [];
+      if(row.some(c => normHeader(c).includes('wono'))){ headerRowIdx = i; break; }
+    }
+    if(headerRowIdx === -1) headerRowIdx = 0; // fallback
+
+    const headerRow = rows[headerRowIdx] || [];
+    const colMap = buildColMap(headerRow);
+
+    const today = todayUTCms();
+    const records = [];
+    for(let i=headerRowIdx+1;i<rows.length;i++){
+      const row = rows[i];
+      if(!row) continue;
+      const get = f => colMap.hasOwnProperty(f) ? row[colMap[f]] : null;
+
+      const woNo = cleanStrCell(get('wo_no'));
+      if(!woNo) continue; // skip rows without a work order number
+
+      const woDate = parseDateCell(get('wo_date'));
+      const mrnDate = parseDateCell(get('mrn_date'));
+      const grnDate = parseDateCell(get('grn_date'));
+      const printingDate = parseDateCell(get('printing_date'));
+      const fgDate = parseDateCell(get('fg_date'));
+      const sheetAging = parseNumCell(get('aging'));
+      const aging = woDate ? Math.round((today - woDate.ms) / 86400000) : sheetAging;
+      const remarksText = cleanStrCell(get('remarks'));
+      const remarksDate = extractDateFromText(remarksText);
+
+      records.push({
+        wo_no: woNo,
+        wo_date: woDate ? woDate.iso : null,
+        delivery: cleanStrCell(get('delivery'), 'Unspecified'),
+        customer: cleanStrCell(get('customer'), 'Unspecified'),
+        job_type: cleanStrCell(get('job_type'), 'Unspecified'),
+        product_code: cleanStrCell(get('product_code')),
+        product_name: cleanStrCell(get('product_name'), 'Unspecified'),
+        ordered_qty: parseNumCell(get('ordered_qty')),
+        pending_qty: parseNumCell(get('pending_qty')),
+        pending_value: parseNumCell(get('pending_value')),
+        status: (cleanStrCell(get('status'), 'UNSPECIFIED')).toUpperCase(),
+        aging: aging,
+        mrn_date: mrnDate ? mrnDate.iso : null,
+        grn_date: grnDate ? grnDate.iso : null,
+        printing_date: printingDate ? printingDate.iso : null,
+        fg_date: fgDate ? fgDate.iso : null,
+        remarks: remarksText,
+        remarks_date: remarksDate,
+      });
+    }
+    return {records, colMap, headerRow, truncated: usedRange && usedRange.truncated};
+  }
+
+  const importBtn = document.getElementById('import-btn');
+  const importFile = document.getElementById('import-file');
+  importBtn.addEventListener('click', ()=> importFile.click());
+  importFile.addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt){
+      try{
+        const wb = XLSX.read(evt.target.result, {type:'array', cellDates:true});
+        const {records, colMap, truncated} = parseWorkbookToRecords(wb);
+        if(!records.length){
+          alert('No pending-order rows were found in this file. Check that it has a "WO No." style column.');
+          return;
+        }
+        RAW = records;
+        activeStageFilter = null;
+        DATA_EL.textContent = JSON.stringify(RAW);
+        sourceLabel = file.name + ' (imported ' + new Date().toLocaleDateString('en-IN') + ')';
+        persistData();
+
+        const coreFields = {wo_no:'WO No.', customer:'Customer', status:'Status', pending_qty:'Pending Qty', pending_value:'Pending Value', aging:'Aging'};
+        const missing = Object.keys(coreFields).filter(f => !colMap.hasOwnProperty(f)).map(f=>coreFields[f]);
+        if(truncated){
+          showImportNotice('Imported ' + records.length + ' rows from ' + file.name + '. This sheet was larger than expected and was capped for safety — some rows near the end may be missing.', true);
+        } else if(missing.length){
+          showImportNotice('Imported ' + records.length + ' rows, but couldn\'t confidently find a column for: ' +
+            missing.join(', ') + '. Those fields are showing as defaults — check the header names in your sheet match (e.g. "Status", "Pending Value").', true);
+        } else {
+          showImportNotice('Imported ' + records.length + ' rows from ' + file.name + '.', false);
+          setTimeout(()=>showImportNotice(null), 5000);
+        }
+
+        renderDashboard();
+      }catch(err){
+        console.error(err);
+        alert('Could not read that file. Please make sure it is a valid .xlsx/.xls export.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    importFile.value = '';
+  });
+
+  // ============ EXPORT ============
+  document.getElementById('export-btn').addEventListener('click', function(){
+    DATA_EL.textContent = JSON.stringify(RAW);
+    const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pending_orders_dashboard_' + new Date().toISOString().slice(0,10) + '.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('print-btn').addEventListener('click', function(){
+    window.print();
+  });
+
+  // ============ SHARED TEAM FILE (auto-loaded on every open) ============
+  // Fixed filename/path, same folder as this page. Whoever manages the data
+  // just overwrites this one file in the hosting each morning — everyone who
+  // opens the dashboard link automatically picks up the latest version.
+  const SHARED_DATA_URL = 'data/pending_orders.xlsx';
+
+  async function tryLoadSharedFile(isManualRefresh){
+    try{
+      const res = await fetch(SHARED_DATA_URL, {cache:'no-store'});
+      if(!res.ok) return false;
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array', cellDates:true});
+      const {records} = parseWorkbookToRecords(wb);
+      if(!records.length) return false;
+      RAW = records;
+      activeStageFilter = null;
+      sourceLabel = 'Shared file (updated by your team) · refreshed ' + new Date().toLocaleString('en-IN', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'});
+      renderDashboard();
+      if(isManualRefresh) showImportNotice('Refreshed from the shared file.', false);
+      if(isManualRefresh) setTimeout(()=>showImportNotice(null), 4000);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+
+  const refreshBtn = document.getElementById('refresh-shared-btn');
+  if(refreshBtn){
+    refreshBtn.addEventListener('click', async function(){
+      refreshBtn.disabled = true;
+      const ok = await tryLoadSharedFile(true);
+      if(!ok) showImportNotice('Could not reach the shared file (data/pending_orders.xlsx). Showing your last available data.', true);
+      refreshBtn.disabled = false;
+    });
+  }
+
+  // ============ INIT ============
+  renderDashboard();
+  // After the first paint (from sample/local data), try the shared file —
+  // if it's reachable, it silently takes over as the source of truth.
+  tryLoadSharedFile(false);
+})();
+
+</script>
+<script>
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:')) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('service-worker.js').catch(function(){});
+    });
+  }
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const btn = document.getElementById('install-app-btn');
+    if(btn) btn.style.display = 'inline-flex';
+  });
+  document.addEventListener('DOMContentLoaded', function(){
+    const btn = document.getElementById('install-app-btn');
+    if(btn){
+      btn.addEventListener('click', function(){
+        if(!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.finally(function(){
+          deferredInstallPrompt = null;
+          btn.style.display = 'none';
+        });
+      });
+    }
+  });
+</script>
+</body>
+</html>
